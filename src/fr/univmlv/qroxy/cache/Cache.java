@@ -14,7 +14,7 @@ public class Cache {
 		//TODO create a reference to the file in cache
 	}
 	
-	public boolean isInCache(String filename) {
+	public boolean isInCache(String filename, String contentType) {
 		//TODO if Configuration.isCacheShared CacheShared.search(filename)
 		return true;
 	}
