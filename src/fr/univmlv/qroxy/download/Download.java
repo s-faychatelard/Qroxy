@@ -29,6 +29,7 @@ public class Download implements Runnable {
 			URLConnection connection = url.openConnection();
 			connection.connect();
 
+			/* Format url informations */
 			String file = connection.getURL().getFile();
 			if (file == "" || file.compareTo("/") == 0)
 				file = "/index.html";
@@ -40,17 +41,18 @@ public class Download implements Runnable {
 			System.out.println("Cache-Control : " + connection.getHeaderField("Cache-Control"));
 
 			/* Prepare cache */
-			// TODO can be equal to -1 do not cache during download
 			Cache cache = Cache.getInstance();
 
-			/*if (cache.isInCache(urlPath, connection.getContentType())) {
+			/* Check if the content is not already in the cache */
+			if (cache.isInCache(urlPath, connection.getContentType())) {
 				// Get from cache
 				System.out.println("Content is in cache");
 				return;
-			}*/
+			}
 
 			boolean caching = false;
 			String cacheControl = (connection.getHeaderField("Cache-Control") == null) ? "" : connection.getHeaderField("Cache-Control");
+			/* Check if you need to cache the file */
 			if (cacheControl.contains("private") == false) {
 				if (connection.getContentLength() != -1) {
 					if (cache.freeSpace(connection.getContentLength())) {
@@ -63,14 +65,14 @@ public class Download implements Runnable {
 				}
 				else {
 					System.out.println("We don't know the real size, downloading before caching");
+					// TODO Content-Length equal to -1 need to found a predetermine size
 					if (cache.freeSpace(100000)) {
-						System.out.println("Space clear for caching");
+						System.out.println("Predetermine space clear for caching");
 						caching = true;
 					}
 					else {
 						System.out.println("No enough space for caching");
 					}
-					caching = true;
 				}
 			}
 			else {
@@ -81,9 +83,15 @@ public class Download implements Runnable {
 			DataInputStream dis = new DataInputStream(connection.getInputStream());
 			byte[] buffer = new byte[BUFFER_SIZE];
 			int readbyte = 0;
-			cache.addContentToCache(ByteBuffer.wrap("".getBytes()), urlPath, contentType, false);
+			
+			if (caching)
+				cache.addContentToCache(ByteBuffer.wrap("".getBytes()), urlPath, contentType, false);
+			
+			/* Declare download to BandwidthService */
 			BandwidthService bandwidthService = BandwidthService.getInstance();
 			bandwidthService.addADownloadWithURLAndType(urlPath, connection.getContentType());
+			
+			/* Download the content */
 			while((readbyte = dis.read(buffer, 0, BUFFER_SIZE)) != -1 && readbyte != 0) {
 				ByteBuffer bb = ByteBuffer.wrap(buffer, 0, readbyte);
 				while(bb.hasRemaining()) {								
@@ -98,14 +106,18 @@ public class Download implements Runnable {
 				}
 				bb.clear();
 				buffer = new byte[BUFFER_SIZE];
+				
+				/* Wait define time to respect bandwidth define by the content type */
 				try {
 					Thread.sleep(bandwidthService.getTimeToWaitForURLAndType(urlPath, readbyte));
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
-			bandwidthService.deleteDownloadWithURLAndType(urlPath);
 			channel.close();
+			
+			/* Remove the download from the BandwidthService */
+			bandwidthService.deleteDownloadWithURLAndType(urlPath);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
