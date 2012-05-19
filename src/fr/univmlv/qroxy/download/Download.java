@@ -60,7 +60,7 @@ public class Download implements Runnable {
 				channel.write(bb);
 				
 				/* Send it to the cache */
-				cache.addContentToCache(bb, url.toString(), connection.getContentType());
+				cache.addContentToCache(bb, url.toString(), connection.getContentType(), true);
 			}
 			channel.close();
 		} catch (IOException e) {
@@ -78,7 +78,7 @@ public class Download implements Runnable {
 			Pipe pipe = Pipe.open();
 			
 			/* Start the download */
-			new Thread(new Download(pipe.sink(), new URL("http://www.apple.fr/"))).start();
+			new Thread(new Download(pipe.sink(), new URL("http://www.facebook.fr/"))).start();
 			
 			/* On receiving data from the pipe, you can send directly to the client */
 			ByteBuffer bb = ByteBuffer.allocateDirect(BUFFER_SIZE);

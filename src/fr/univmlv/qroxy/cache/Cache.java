@@ -10,7 +10,7 @@ public class Cache {
 		return instance;
 	}
 	
-	public void addContentToCache(ByteBuffer buffer, String filename, String contentType) {
+	public void addContentToCache(ByteBuffer buffer, String filename, String contentType, boolean append) {
 		//TODO create a reference to the file in cache
 	}
 	

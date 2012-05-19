@@ -1,6 +1,6 @@
 package fr.univmlv.qroxy.cache.shared;
 
-public class CacheSahred {
+public class CacheShared {
 
 	/**
 	 * @param args
