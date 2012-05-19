@@ -51,8 +51,8 @@ public class Download implements Runnable {
 
 			boolean caching = false;
 			String cacheControl = (connection.getHeaderField("Cache-Control") == null) ? "" : connection.getHeaderField("Cache-Control");
-			if (connection.getContentLength() != -1) {
-				if (cacheControl.contains("private") == false) {
+			if (cacheControl.contains("private") == false) {
+				if (connection.getContentLength() != -1) {
 					if (cache.freeSpace(connection.getContentLength())) {
 						System.out.println("Space clear for caching");
 						caching = true;
@@ -62,19 +62,19 @@ public class Download implements Runnable {
 					}
 				}
 				else {
-					System.out.println("Cache-control is private");
+					System.out.println("We don't know the real size, downloading before caching");
+					if (cache.freeSpace(100000)) {
+						System.out.println("Space clear for caching");
+						caching = true;
+					}
+					else {
+						System.out.println("No enough space for caching");
+					}
+					caching = true;
 				}
 			}
 			else {
-				System.out.println("We don't know the real size, downloading before caching");
-				if (cache.freeSpace(connection.getInputStream().available())) {
-					System.out.println("Space clear for caching");
-					caching = true;
-				}
-				else {
-					System.out.println("No enough space for caching");
-				}
-				caching = true;
+				System.out.println("Cache-control is private");
 			}
 
 			/* Get content from url and send it to the cache and client */
@@ -93,7 +93,7 @@ public class Download implements Runnable {
 					/* Send it to the cache */
 					if (caching)
 						cache.addContentToCache(bb, urlPath, connection.getContentType(), true);
-						
+
 					bb.remaining();
 				}
 				bb.clear();

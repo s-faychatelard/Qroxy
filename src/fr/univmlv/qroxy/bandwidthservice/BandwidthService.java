@@ -74,11 +74,6 @@ public class BandwidthService {
 		double previousBandwidth = downloads.get(url).currentBandwidth;
 		long endTime = new Date().getTime();
 		long duration = endTime - downloads.get(url).startTime;
-		
-		System.out.println("Duration : " + duration);
-		System.out.println("Content size : " + contentSize);
-		System.out.println("Bandwidth : " + previousBandwidth);
-		
 		this.recalculateBandwidth(url, contentSize);
 		System.out.println("PB : " + previousBandwidth + " NB : " + downloads.get(url).currentBandwidth);
 		int timeToWait = (int)(((double)contentSize/(double)previousBandwidth) - duration);
@@ -120,7 +115,6 @@ public class BandwidthService {
 
 		/* Save the theorical bandwidth for further use */
 		theoricalBandwith = ((double)contentSize/(double)duration);
-		System.out.println("Download time : " + duration + "ms");
 		System.out.println("Theorical bandwith : " + theoricalBandwith + " ko/s");
 		System.out.println("Theorical diff of bandwith : " + diffBandwidth + " ko/s");
 	}
