@@ -37,11 +37,11 @@ public class Download implements Runnable {
 			// TODO can be equal to -1 do not cache during download
 			Cache cache = Cache.getInstance();
 			
-			if (cache.isInCache(url.toString(), connection.getContentType())) {
+			/*if (cache.isInCache(url.toString(), connection.getContentType())) {
 				// Get from cache
 				System.out.println("Content is in cache");
 				return;
-			}
+			}*/
 			
 			boolean caching = false;
 			String cacheControl = (connection.getHeaderField("Cache-Control") == null) ? "" : connection.getHeaderField("Cache-Control");
@@ -110,9 +110,9 @@ public class Download implements Runnable {
 			while ((readbyte = pipe.source().read(bb)) != -1 || readbyte == 0) {
 				bb.flip();
 				bb.get(buffer);
-				/*for(int i=0; i<readbyte; i++) {
+				for(int i=0; i<readbyte; i++) {
 					System.out.print((char)buffer[i]);
-				}*/
+				}
 				bb.clear();
 			}
 			System.out.println("");

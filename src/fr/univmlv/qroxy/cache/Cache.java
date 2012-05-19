@@ -20,6 +20,7 @@ public class Cache {
 	}
 	
 	public void addContentToCache(ByteBuffer buffer, String filename, String contentType, boolean append) throws IOException {
+		contentType = contentType.split(";")[0];
 		File contentTypeF = new File(contentType);
 		filename = filename.replace("://", "_");
 		String[] f = filename.split("/");
@@ -56,7 +57,7 @@ public class Cache {
 		Cache cache = Cache.getInstance();
 		ByteBuffer buffer = ByteBuffer.allocate(10);
 		buffer.putInt(60);
-		cache.addContentToCache(buffer, "http://www.facebook.com/joach/video/index.html", "text/html", false);
+		cache.addContentToCache(buffer, "http://www.facebook.com/joach//video/", "text/html", false);
 		//cache.addContentToCache(buffer, "http://www.facebook.com/joach/index.html", "text/html", true);
 	}
 }
