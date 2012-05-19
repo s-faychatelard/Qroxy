@@ -11,7 +11,6 @@ public class Cache {
 	}
 	
 	public void addContentToCache(ByteBuffer buffer, String filename, String contentType, boolean append) {
-		//Test de commit joachim
 		//TODO create a reference to the file in cache
 	}
 	
