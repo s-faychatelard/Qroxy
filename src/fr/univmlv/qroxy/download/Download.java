@@ -27,32 +27,54 @@ public class Download implements Runnable {
 			/* Get informations */
 			URLConnection connection = url.openConnection();
 			connection.connect();
-			System.out.println("Filename : " + url.getFile());
+			System.out.println("Url : " + url.toString());
 			System.out.println("Content-Type : " + connection.getContentType());
 			System.out.println("Content-Length : " + connection.getContentLength());
+			System.out.println("Theoric content length " + connection.getInputStream().available());
 			System.out.println("Cache-Control : " + connection.getHeaderField("Cache-Control"));
 			
 			/* Prepare cache */
 			// TODO can be equal to -1 do not cache during download
 			Cache cache = Cache.getInstance();
+			
+			if (cache.isInCache(url.toString(), connection.getContentType())) {
+				// Get from cache
+				System.out.println("Content is in cache");
+				return;
+			}
+			
+			boolean caching = false;
 			String cacheControl = (connection.getHeaderField("Cache-Control") == null) ? "" : connection.getHeaderField("Cache-Control");
-			if (connection.getContentLength() != -1 && cacheControl.compareToIgnoreCase("private") != 0) {
-				if (cache.freeSpace(connection.getContentLength())) {
-					System.out.println("Space clear for caching");
+			if (connection.getContentLength() != -1) {
+				if (cacheControl.contains("private") == false) {
+					if (cache.freeSpace(connection.getContentLength())) {
+						System.out.println("Space clear for caching");
+						caching = true;
+					}
+					else {
+						System.out.println("No enough space for caching");
+					}
 				}
 				else {
-					System.out.println("No enough space for caching");
+					System.out.println("Cache-control is private");
 				}
 			}
 			else {
 				System.out.println("We don't know the real size, downloading before caching");
+				if (cache.freeSpace(connection.getInputStream().available())) {
+					System.out.println("Space clear for caching");
+					caching = true;
+				}
+				else {
+					System.out.println("No enough space for caching");
+				}
+				caching = true;
 			}
 			
 			/* Get content from url and send it to the cache and client */
 			DataInputStream dis = new DataInputStream(connection.getInputStream());
 			byte[] buffer = new byte[BUFFER_SIZE];
 			int readbyte = 0;
-			
 			while((readbyte = dis.read(buffer, 0, BUFFER_SIZE)) != -1 || readbyte == 0) {
 				ByteBuffer bb = ByteBuffer.wrap(buffer);
 				
@@ -60,7 +82,8 @@ public class Download implements Runnable {
 				channel.write(bb);
 				
 				/* Send it to the cache */
-				cache.addContentToCache(bb, url.toString(), connection.getContentType(), true);
+				if (caching)
+					cache.addContentToCache(bb, url.toString(), connection.getContentType(), true);
 			}
 			channel.close();
 		} catch (IOException e) {
@@ -78,7 +101,7 @@ public class Download implements Runnable {
 			Pipe pipe = Pipe.open();
 			
 			/* Start the download */
-			new Thread(new Download(pipe.sink(), new URL("http://www.facebook.fr/"))).start();
+			new Thread(new Download(pipe.sink(), new URL("http://www.apple.fr/"))).start();
 			
 			/* On receiving data from the pipe, you can send directly to the client */
 			ByteBuffer bb = ByteBuffer.allocateDirect(BUFFER_SIZE);
@@ -87,10 +110,10 @@ public class Download implements Runnable {
 			while ((readbyte = pipe.source().read(bb)) != -1 || readbyte == 0) {
 				bb.flip();
 				bb.get(buffer);
-				for(int i=0; i<readbyte; i++) {
+				/*for(int i=0; i<readbyte; i++) {
 					System.out.print((char)buffer[i]);
-				}
-				bb.compact();
+				}*/
+				bb.clear();
 			}
 			System.out.println("");
 			System.out.println("End of download");

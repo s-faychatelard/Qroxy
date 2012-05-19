@@ -2,6 +2,20 @@ package fr.univmlv.qroxy.configuration;
 
 public class Configuration {
 	
+	private final static Configuration instance = new Configuration();
+	
+	private Configuration() {
+		//Read conf from file
+	}
+	
+	public static Configuration getInstance() {
+		return instance;
+	}
+	
+	public int getWeightForType(String contentType) {
+		return 1;
+	}
+	
 	/**
 	 * Must contain directory path for cache
 	 * Information about priority of type file
