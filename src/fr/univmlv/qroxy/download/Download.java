@@ -3,6 +3,7 @@ package fr.univmlv.qroxy.download;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
@@ -27,21 +28,25 @@ public class Download implements Runnable {
 			/* Get informations */
 			URLConnection connection = url.openConnection();
 			connection.connect();
-			System.out.println("Url : " + url.toString());
+			
+			String file = connection.getURL().getFile();
+			if (file == "" || file.compareTo("/") == 0)
+				file = "/index.html";
+			String urlPath = connection.getURL().getProtocol() + "://" + connection.getURL().getHost() + file;
+			System.out.println("Url : " + urlPath);
 			System.out.println("Content-Type : " + connection.getContentType());
 			System.out.println("Content-Length : " + connection.getContentLength());
-			System.out.println("Theoric content length " + connection.getInputStream().available());
 			System.out.println("Cache-Control : " + connection.getHeaderField("Cache-Control"));
 			
 			/* Prepare cache */
 			// TODO can be equal to -1 do not cache during download
 			Cache cache = Cache.getInstance();
 			
-			if (cache.isInCache(url.toString(), connection.getContentType())) {
+			/*if (cache.isInCache(urlPath, connection.getContentType())) {
 				// Get from cache
 				System.out.println("Content is in cache");
 				return;
-			}
+			}*/
 			
 			boolean caching = false;
 			String cacheControl = (connection.getHeaderField("Cache-Control") == null) ? "" : connection.getHeaderField("Cache-Control");
@@ -101,7 +106,7 @@ public class Download implements Runnable {
 			Pipe pipe = Pipe.open();
 			
 			/* Start the download */
-			new Thread(new Download(pipe.sink(), new URL("http://www.apple.fr/"))).start();
+			new Thread(new Download(pipe.sink(), new URL("http://apple.com"))).start();
 			
 			/* On receiving data from the pipe, you can send directly to the client */
 			ByteBuffer bb = ByteBuffer.allocateDirect(BUFFER_SIZE);
