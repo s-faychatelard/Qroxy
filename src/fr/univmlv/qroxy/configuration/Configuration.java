@@ -1,13 +1,14 @@
 package fr.univmlv.qroxy.configuration;
 
 public class Configuration {
-
+	
 	/**
-	 * @param args
+	 * Must contain directory path for cache
+	 * Information about priority of type file
+	 *  
 	 */
+
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 
 	}
-
 }

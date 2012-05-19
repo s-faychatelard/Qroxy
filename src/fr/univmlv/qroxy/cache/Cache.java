@@ -1,5 +1,7 @@
 package fr.univmlv.qroxy.cache;
 
+import java.nio.ByteBuffer;
+
 public class Cache {
 
 	private final static Cache instance = new Cache();
@@ -8,7 +10,7 @@ public class Cache {
 		return instance;
 	}
 	
-	public void addContentToCache(Object content, String contentType) {
+	public void addContentToCache(ByteBuffer buffer, String filename, String contentType) {
 		//TODO create a reference to the file in cache
 	}
 	
