@@ -55,31 +55,31 @@ public class BandwidthService {
 		long duration = endTime - downloads.get(url).startTime;
 		downloads.get(url).startTime = endTime;
 		double diffBandwidth = ((double)contentSize/(double)duration) - theoricalBandwith;
-		
+
 		/* Do not recalculate if it is the first loop, all calcule will be false */
 		if (theoricalBandwith == 0) {
 			theoricalBandwith = ((double)contentSize/(double)duration);
 			return;
 		}
-		
+
 		/* Caculate global weight of current downloads */
 		int globalWeight=0;
 		for (DownloadBandwidth db : downloads.values()) {
 			globalWeight += Configuration.getInstance().getWeightForType(db.contentType);
 		}
-		
+
 		/* Adjust bandwidth for specific download */
 		for (DownloadBandwidth db : downloads.values()) {
 			db.bandwidth += diffBandwidth * Configuration.getInstance().getWeightForType(db.contentType)/globalWeight;
 		}
-		
+
 		/* Save the theorical bandwidth for further use */
 		theoricalBandwith = ((double)contentSize/(double)duration);
 		System.out.println("Download time : " + duration + "ms");
 		System.out.println("Theorical bandwith : " + theoricalBandwith + " ko/s");
 		System.out.println("Theorical diff of bandwith : " + diffBandwidth + " ko/s");
 	}
-	
+
 	public static void main(String[] args) {
 		BandwidthService bandwidthService = BandwidthService.getInstance();
 		bandwidthService.addADownloadWithURLAndType("http://www.google.fr", "text/html");
