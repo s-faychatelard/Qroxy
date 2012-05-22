@@ -65,7 +65,7 @@ public class Download implements Runnable {
 				}
 				else {
 					System.out.println("We don't know the real size, downloading before caching");
-					// TODO Content-Length equal to -1 need to found a predetermine size
+					// TODO Content-Length equal to -1 need to found a predetermine size to free
 					if (cache.freeSpace(100000)) {
 						System.out.println("Predetermine space clear for caching");
 						caching = true;

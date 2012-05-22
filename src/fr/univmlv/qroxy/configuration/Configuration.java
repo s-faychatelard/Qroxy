@@ -3,9 +3,14 @@ package fr.univmlv.qroxy.configuration;
 public class Configuration {
 	
 	private final static Configuration instance = new Configuration();
+	private String path;
 	
 	private Configuration() {
 		//Read conf from file
+	}
+	
+	public void prepareConfigurationWithPath(String path) {
+		this.path = path;
 	}
 	
 	public static Configuration getInstance() {

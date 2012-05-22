@@ -7,10 +7,9 @@ public class TreeCache {
 		String[] paths = path.split("/");
 		root.addChild(paths, 0);
 	}
-	
-	public int getWeight(String path) {
-		String[] paths = path.split("/");
-		return root.getWeight(paths, 0);
+
+	public String getSmallerWeightPath() {
+		return root.getSmallerWeightPath();
 	}
 	
 	public static void main(String[] args) {
@@ -18,10 +17,11 @@ public class TreeCache {
 		tree.addPath("text/html/http_www.google.fr/index.html");
 		tree.addPath("text/html/http_www.google.fr/tmp/1");
 		tree.addPath("text/html/http_www.apple.fr/index.html");
-		System.out.println(tree.getWeight("text/html/http_www.google.fr"));
-		System.out.println(tree.getWeight("text/html/http_www.google.fr/index.html"));
+		System.out.println(tree.getSmallerWeightPath());
 		tree.addPath("text/html/http_www.google.fr/index.html");
-		System.out.println(tree.getWeight("text/html/http_www.google.fr/index.html"));
-		System.out.println(tree.getWeight("text"));
+		tree.addPath("text/html/http_www.apple.fr/index.html");
+		tree.addPath("text/html/http_www.apple.fr/index.html");
+		tree.addPath("text/html/http_www.apple.fr/index.html");
+		System.out.println(tree.getSmallerWeightPath());
 	}
 }
