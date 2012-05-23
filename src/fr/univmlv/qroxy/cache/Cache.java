@@ -20,6 +20,7 @@ public class Cache {
 		url = f[f.length -1];
 		StringBuilder arbo = new StringBuilder();
 		contentTypeF.mkdirs();
+		arbo.append("cache/");
 		arbo.append(contentType).append("/");
 		for (int i = 0; i < f.length-1 ; i++) {
 			arbo.append(f[i]).append("/");
@@ -36,6 +37,7 @@ public class Cache {
 	}
 	
 	public boolean isInCache(String url, String contentType) {
+		//TODO contentType can be null
 		contentType = contentType.split(";")[0];
 		url = url.replace("://", "_");
 		StringBuilder filename = new StringBuilder(contentType).append("/").append(url);
@@ -55,5 +57,5 @@ public class Cache {
 		cache.addContentToCache(buffer, "http://www.facebook.com/joach//video/", "text/html", false);
 		//cache.addContentToCache(buffer, "http://www.facebook.com/joach/index.html", "text/html", true);
 		System.out.println(cache.isInCache("http://www.facebook.com/joach/index.html", "text/html"));
-		}
+	}
 }
