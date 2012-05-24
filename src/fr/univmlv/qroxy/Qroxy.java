@@ -1,9 +1,9 @@
 package fr.univmlv.qroxy;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 import java.nio.channels.SelectionKey;
@@ -19,105 +19,167 @@ import fr.univmlv.qroxy.download.Download;
 
 public class Qroxy {
 
-	private final ServerSocketChannel channel;
+	private ServerSocketChannel channel;
 
-	private final static int BUFFER_SIZE = 1024;
-
-	static class Buffers {
-		static final ByteBuffer in = ByteBuffer.allocate(BUFFER_SIZE);
-		static final ByteBuffer out = ByteBuffer.allocate(BUFFER_SIZE);
+	private final static int BUFFER_SIZE = 2048;
+	
+	private static class Client {
+		public ByteBuffer out = ByteBuffer.allocate(BUFFER_SIZE);
+		public SocketChannel channel;
+		
+		public Client(SocketChannel channel) {
+			this.channel = channel;
+		}
 	}
 
-	public Qroxy(int remotePort) throws UnknownHostException, IOException {
-		channel = ServerSocketChannel.open();
-		channel.configureBlocking(false);
-		channel.bind(new InetSocketAddress(remotePort));
+	public Qroxy(int remotePort)  {
+		try {
+			channel = ServerSocketChannel.open();
+			channel.configureBlocking(false);
+			channel.bind(new InetSocketAddress(remotePort));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
-	public void launch() throws IOException, InterruptedException {
-		HashMap<SourceChannel, SocketChannel> map = new HashMap<SourceChannel, SocketChannel>();
-		Selector selector = Selector.open();
-		channel.register(selector, SelectionKey.OP_ACCEPT);
-		while (true) {
-			selector.select();
-			Iterator<SelectionKey> it = selector.selectedKeys().iterator();
-			while (it.hasNext()) {
-				SelectionKey selKey = (SelectionKey)it.next();
-				it.remove();
-				if (selKey.isValid() && selKey.isAcceptable()) {
-					ServerSocketChannel sChannel = (ServerSocketChannel)selKey.channel();
-					SocketChannel clientChannel = sChannel.accept();
-					clientChannel.configureBlocking(false);
-					clientChannel.register(selector, SelectionKey.OP_READ);
-				}
-				if (selKey.isValid() && selKey.isReadable()) {
-					/* It's a client request */
-					if (!(selKey.channel() instanceof SourceChannel)) {
-						SocketChannel clientChannel = (SocketChannel)selKey.channel();
-						Buffers.in.clear();
-						clientChannel.read(Buffers.in);
+	public void launch() {
+		try {
+			HashMap<SourceChannel, Client> map = new HashMap<SourceChannel, Client>();
+			HashMap<SocketChannel, Client> mapClient = new HashMap<SocketChannel, Client>();
+			Selector selector;
+			selector = Selector.open();
+			channel.register(selector, SelectionKey.OP_ACCEPT);
+			while (true) {
+				selector.select();
+				Iterator<SelectionKey> it = selector.selectedKeys().iterator();
+				while (it.hasNext()) {
+					SelectionKey selKey = (SelectionKey)it.next();
+					it.remove();
+					if (selKey.isValid() && selKey.isAcceptable()) {
+						ServerSocketChannel sChannel = (ServerSocketChannel)selKey.channel();
+						SocketChannel clientChannel = sChannel.accept();
+						clientChannel.configureBlocking(false);
+						clientChannel.register(selector, SelectionKey.OP_READ);
+					}
+					if (selKey.isValid() && selKey.isReadable()) {
+						/* It's a client request */
+						if (!(selKey.channel() instanceof SourceChannel)) {
+							SocketChannel clientChannel = (SocketChannel)selKey.channel();
+							Scanner scanner = new Scanner(clientChannel);
 
-						String request = new String(Buffers.in.array());
-						System.out.println(request);
-						Scanner scanner = new Scanner(request);
-						if (scanner.hasNext()) {
-							if (scanner.next().compareToIgnoreCase("GET") == 0) {
-								/* Create a pipe to communicate with the thread */
-								Pipe pipe = Pipe.open();
-								pipe.source().configureBlocking(false);
-								pipe.source().register(selector, SelectionKey.OP_READ);
+							if (scanner.hasNextLine()) {
+								String line = scanner.nextLine();
+								if (line.contains("GET") || line.contains("POST") || line.contains("HEADER")) {
+									String[] request = line.split(" ");
 
-								/* Save the clientChannel for a specific pipe */
-								map.put(pipe.source(), clientChannel);
+									while (scanner.hasNextLine()) {
+										String lin = scanner.nextLine();
+										if (lin.length() == 0) {
+											/* End of header request */
+											break;
+										}
+									}
+									
+									/* Create a pipe to communicate with the thread */
+									Pipe pipe = Pipe.open();
+									pipe.source().configureBlocking(false);
+									pipe.source().register(selector, SelectionKey.OP_READ);
 
-								/* Start the download */
-								URL url = new URL(scanner.next());
-								new Thread(new Download(pipe.sink(), url)).start();
+									/* Save the clientChannel for a specific pipe */
+									Client client = new Client(clientChannel);
+									map.put(pipe.source(), client);
+									mapClient.put(clientChannel, client);
+
+									/* URL of the request */
+									URL url = new URL(request[1]);
+									
+									/* Send the header response to the Client */
+									HttpURLConnection.setFollowRedirects(true);
+									HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+									StringBuilder sb = new StringBuilder();
+									for(int i=0; i<connection.getHeaderFields().size(); i++) {
+										String headerName = connection.getHeaderFieldKey(i);
+										if (headerName != null) {
+											if (headerName.compareToIgnoreCase("Content-Length") != 0 && 
+													headerName.compareToIgnoreCase("Transfer-­Encoding") != 0) {
+												sb.append(connection.getHeaderFieldKey(i));
+												sb.append(":");
+												sb.append(connection.getHeaderField(i));
+											}
+										}
+										else {
+											sb.append(connection.getHeaderField(i));
+										}
+										sb.append(" ");
+									}
+									sb.append("Transfer-Encoding:chunked\r\n");
+									clientChannel.write(ByteBuffer.wrap(sb.toString().getBytes()));
+									
+									/* Start the download */
+									new Thread(new Download(pipe.sink(), url, request[0])).start();
+								}
+								else {
+									System.out.println(line);
+								}
 							}
 						}
-					}
-					/* It's a pipe receive */
-					else if (selKey.channel() instanceof SourceChannel) {
-						SourceChannel pipeChannel = (SourceChannel)selKey.channel();
+						/* It's a pipe receive */
+						else if (selKey.channel() instanceof SourceChannel) {
+							SourceChannel pipeChannel = (SourceChannel)selKey.channel();
 
-						/* Get the clientChannel from its pipe */
-						SocketChannel clientChannel = map.get(pipeChannel);
+							/* Get the clientChannel from its pipe */
+							Client client = map.get(pipeChannel);
 
-						/* Get the data from the pipe */
-						if (pipeChannel.read(Buffers.out) == -1) {
-							pipeChannel.close();
+							/* Get the data from the pipe */
+							if (pipeChannel.read(client.out) == -1) {
+								client.out.flip();
+								if (client.out.limit() != 0) {
+									ByteBuffer bb = ByteBuffer.allocate(20);
+									bb.put(Integer.toBinaryString(client.out.limit()).getBytes()).put("\r\n".getBytes());
+									bb.flip();
+									client.channel.write(bb);
+									client.out.put("\r\n".getBytes());
+									client.channel.write(client.out);
+								}
+								pipeChannel.close();
+								mapClient.remove(map.get(pipeChannel));
+								map.remove(pipeChannel);
+								ByteBuffer end = ByteBuffer.allocate(20);
+								end.put("".getBytes()).put("\r\n".getBytes());
+								end.flip();
+								client.channel.write(end);
+								client.channel.close();
+								continue;
+							}
+
+							/* Register has available for writing*/
+							client.channel.register(selector, SelectionKey.OP_WRITE);
 						}
-
-						/* Register has available for writing*/
-						clientChannel.register(selector, SelectionKey.OP_WRITE);
 					}
-				}
-				if (selKey.isValid() && selKey.isWritable()) {
-					SocketChannel clientChannel = (SocketChannel)selKey.channel();
-					while(Buffers.out.position() != 0) {
-						Buffers.out.flip();
-						ByteBuffer bb = ByteBuffer.allocate(4);
-						bb.putInt(Buffers.out.limit());
-						clientChannel.write(bb);
-						clientChannel.write(Buffers.out);
-						Buffers.out.compact();
+					if (selKey.isValid() && selKey.isWritable()) {
+						Client client = mapClient.get(selKey.channel());
+						client.out.flip();
+						if (client.out.limit() == 0) {
+							selKey.interestOps(SelectionKey.OP_READ);
+							continue;
+						}
+						ByteBuffer bb = ByteBuffer.allocate(20);
+						bb.put(Integer.toBinaryString(client.out.limit()).getBytes()).put("\r\n".getBytes());
+						bb.flip();
+						client.channel.write(bb);
+						client.out.put("\r\n".getBytes());
+						client.channel.write(client.out);
+						client.out.compact();
+						selKey.interestOps(SelectionKey.OP_READ);
 					}
-					Buffers.out.clear();
-					selKey.interestOps(SelectionKey.OP_READ);
 				}
 			}
+		}catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 
 	public static void main(String[] args) {
-		try {
-			new Qroxy(8080).launch();
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		new Qroxy(8080).launch();
 	}
 }

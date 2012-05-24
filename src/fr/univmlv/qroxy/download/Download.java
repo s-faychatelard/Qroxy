@@ -2,9 +2,9 @@ package fr.univmlv.qroxy.download;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 
@@ -16,50 +16,40 @@ public class Download implements Runnable {
 	private final static int BUFFER_SIZE = 1024;
 	private final Pipe.SinkChannel channel;
 	private final URL url;
+	private final String requestMethod;
 
-	public Download(Pipe.SinkChannel channel, URL url) {
+	public Download(Pipe.SinkChannel channel, URL url, String requestMethod) {
 		this.channel = channel;
 		this.url = url;
+		this.requestMethod = requestMethod;
 	}
 
 	@Override
 	public void run() {
+		HttpURLConnection connection = null;
 		try {
 			/* Get informations */
-			URLConnection connection = url.openConnection();
-			//connection.connect();
+			HttpURLConnection.setFollowRedirects(true);
+			connection = (HttpURLConnection)url.openConnection();
+			connection.setRequestMethod(this.requestMethod);
 
-			/* Format url informations */
+			// TODO check response code
+			if (connection.getResponseCode() != 200) {
+				StringBuilder sb = new StringBuilder("HTTP/1.0 ");
+				sb.append(connection.getResponseCode()).append(" ");
+				sb.append(connection.getResponseMessage()).append("\n");
+				ByteBuffer bb = ByteBuffer.wrap(sb.toString().getBytes());
+				channel.write(bb);
+				System.out.println("HTTP error");
+				return;
+			}
+
+			/* Format url informations and send it to the client */
 			String file = connection.getURL().getFile();
 			if (file == "" || file.compareTo("/") == 0)
 				file = "/index.html";
 			String urlPath = connection.getURL().getProtocol() + "://" + connection.getURL().getHost() + file;
 			String contentType = connection.getContentType();
-			/*System.out.println("Url : " + urlPath);
-			System.out.println("Content-Type : " + contentType);
-			System.out.println("Content-Length : " + connection.getContentLength());
-			System.out.println("Cache-Control : " + connection.getHeaderField("Cache-Control"));
-			System.out.println("Cache-Encoding : " + connection.getContentEncoding());*/
-			for(int i=0; i<connection.getHeaderFields().size(); i++) {
-				StringBuilder sb = new StringBuilder();
-				String headerName = connection.getHeaderFieldKey(i);
-				if (headerName != null) {
-					if (headerName.compareToIgnoreCase("Content-Length") != 0 && 
-							headerName.compareToIgnoreCase("Transfer-­Encoding") != 0) {
-						sb.append(connection.getHeaderFieldKey(i));
-						sb.append(":");
-						sb.append(connection.getHeaderField(i));
-					}
-				}
-				else {
-					sb.append(connection.getHeaderField(i));
-				}
-				//System.out.println(sb.toString());
-				ByteBuffer bb = ByteBuffer.wrap(sb.toString().getBytes());
-				channel.write(bb);
-			}
-			channel.write(ByteBuffer.wrap("Transfer-­Encoding:chunked\n".getBytes()));
-			channel.write(ByteBuffer.wrap("\n\n".getBytes()));
 
 			/* Prepare cache */
 			Cache cache = Cache.getInstance();
@@ -85,7 +75,7 @@ public class Download implements Runnable {
 					}
 				}
 				else {
-					System.out.println("We don't know the real size, downloading before caching");
+					//System.out.println("We don't know the real size, downloading before caching");
 					// TODO Content-Length equal to -1 need to found a predetermine size to free
 					if (cache.freeSpace(100000)) {
 						//System.out.println("Predetermine space clear for caching");
@@ -104,13 +94,13 @@ public class Download implements Runnable {
 			DataInputStream dis = new DataInputStream(connection.getInputStream());
 			byte[] buffer = new byte[BUFFER_SIZE];
 			int readbyte = 0;
-			
+
 			if (caching)
 				cache.addContentToCache(ByteBuffer.wrap("".getBytes()), urlPath, contentType, false);
-			
+
 			/* Declare download to BandwidthService */
-			BandwidthService bandwidthService = BandwidthService.getInstance();
-			bandwidthService.addADownloadWithURLAndType(urlPath, connection.getContentType());
+			//BandwidthService bandwidthService = BandwidthService.getInstance();
+			//bandwidthService.addADownloadWithURLAndType(urlPath, connection.getContentType());
 
 			/* Download the content */
 			while((readbyte = dis.read(buffer, 0, BUFFER_SIZE)) != -1 && readbyte != 0) {
@@ -127,19 +117,21 @@ public class Download implements Runnable {
 				}
 				bb.clear();
 				buffer = new byte[BUFFER_SIZE];
-				
+
 				/* Wait define time to respect bandwidth define by the content type */
-				try {
+				/*try {
 					Thread.sleep(bandwidthService.getTimeToWaitForURLAndType(urlPath, readbyte));
 				} catch (InterruptedException e) {
 					e.printStackTrace();
-				}
+				}*/
 			}
+			connection.disconnect();
 			channel.close();
-			
+
 			/* Remove the download from the BandwidthService */
 			//bandwidthService.deleteDownloadWithURLAndType(urlPath);
 		} catch (IOException e) {
+			System.out.println("la");
 			e.printStackTrace();
 		}
 	}
@@ -154,7 +146,7 @@ public class Download implements Runnable {
 			Pipe pipe = Pipe.open();
 
 			/* Start the download */
-			new Thread(new Download(pipe.sink(), new URL("http://movies.apple.com/media/us/ipad/2012/80ba527a-1a34-4f70-aae8-14f87ab76eea/apple-ipad-tour-safari-us-20120306_600x671.mp4"))).start();
+			new Thread(new Download(pipe.sink(), new URL("http://google.fr/search?q=Robert+Moog&oi=ddle&ct=moog12-hp"), "GET")).start();
 
 			/* On receiving data from the pipe, you can send directly to the client */
 			ByteBuffer bb = ByteBuffer.allocateDirect(BUFFER_SIZE);

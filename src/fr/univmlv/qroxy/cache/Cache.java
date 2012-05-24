@@ -20,7 +20,6 @@ public class Cache {
 		url = f[f.length -1];
 		StringBuilder arbo = new StringBuilder();
 		contentTypeF.mkdirs();
-		arbo.append("cache/");
 		arbo.append(contentType).append("/");
 		for (int i = 0; i < f.length-1 ; i++) {
 			arbo.append(f[i]).append("/");

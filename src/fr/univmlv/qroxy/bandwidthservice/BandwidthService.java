@@ -51,7 +51,7 @@ public class BandwidthService {
 	 * @param contentType of the download
 	 */
 	public void addADownloadWithURLAndType(String url, String contentType) {
-		downloads.put(url, new DownloadBandwidth(contentType, 200));
+		downloads.put(url, new DownloadBandwidth(contentType, 2000));
 	}
 	
 	/**
