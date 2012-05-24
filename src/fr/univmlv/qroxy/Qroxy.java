@@ -20,9 +20,11 @@ import fr.univmlv.qroxy.download.Download;
 public class Qroxy {
 
 	private ServerSocketChannel channel;
-
-	private final static int BUFFER_SIZE = 2048;
+	private final static int BUFFER_SIZE = 1024;
 	
+	/**
+	 * Private class for managing a buffer for each specific client
+	 */
 	private static class Client {
 		public ByteBuffer out = ByteBuffer.allocate(BUFFER_SIZE);
 		public SocketChannel channel;
@@ -32,6 +34,10 @@ public class Qroxy {
 		}
 	}
 
+	/**
+	 * Create the Qroxy server and launch it
+	 * @param remotePort the listening port of the Qroxy
+	 */
 	public Qroxy(int remotePort)  {
 		try {
 			channel = ServerSocketChannel.open();
@@ -42,10 +48,15 @@ public class Qroxy {
 		}
 	}
 
+	/**
+	 * Manage communication with clients
+	 */
 	public void launch() {
 		try {
+			/* We create correspondence between a pipe and a socket client in both way */
 			HashMap<SourceChannel, Client> map = new HashMap<SourceChannel, Client>();
 			HashMap<SocketChannel, Client> mapClient = new HashMap<SocketChannel, Client>();
+	
 			Selector selector;
 			selector = Selector.open();
 			channel.register(selector, SelectionKey.OP_ACCEPT);
@@ -55,13 +66,18 @@ public class Qroxy {
 				while (it.hasNext()) {
 					SelectionKey selKey = (SelectionKey)it.next();
 					it.remove();
+					
+					/* Client connection */
 					if (selKey.isValid() && selKey.isAcceptable()) {
 						ServerSocketChannel sChannel = (ServerSocketChannel)selKey.channel();
 						SocketChannel clientChannel = sChannel.accept();
 						clientChannel.configureBlocking(false);
 						clientChannel.register(selector, SelectionKey.OP_READ);
 					}
+					
+					/* Client receive */
 					if (selKey.isValid() && selKey.isReadable()) {
+						
 						/* It's a client request */
 						if (!(selKey.channel() instanceof SourceChannel)) {
 							SocketChannel clientChannel = (SocketChannel)selKey.channel();
@@ -69,60 +85,46 @@ public class Qroxy {
 
 							if (scanner.hasNextLine()) {
 								String line = scanner.nextLine();
-								if (line.contains("GET") || line.contains("POST") || line.contains("HEADER")) {
-									String[] request = line.split(" ");
+								String[] request = line.split(" ");
+								
+								/* Create a pipe to communicate with the thread */
+								Pipe pipe = Pipe.open();
+								pipe.source().configureBlocking(false);
+								pipe.source().register(selector, SelectionKey.OP_READ);
 
-									while (scanner.hasNextLine()) {
-										String lin = scanner.nextLine();
-										if (lin.length() == 0) {
-											/* End of header request */
-											break;
-										}
+								/* Save the clientChannel for a specific pipe */
+								Client client = new Client(clientChannel);
+								map.put(pipe.source(), client);
+								mapClient.put(clientChannel, client);
+
+								/* URL of the request */
+								URL url = new URL(request[1]);
+								
+								/* Send the header response to the Client */
+								HttpURLConnection.setFollowRedirects(true);
+								HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+								StringBuilder sb = new StringBuilder();
+								for(int i=0; i<connection.getHeaderFields().size(); i++) {
+									String headerName = connection.getHeaderFieldKey(i);
+									if (headerName != null) {
+										sb.append(connection.getHeaderFieldKey(i));
+										sb.append("=");
+										sb.append(connection.getHeaderField(i));
 									}
-									
-									/* Create a pipe to communicate with the thread */
-									Pipe pipe = Pipe.open();
-									pipe.source().configureBlocking(false);
-									pipe.source().register(selector, SelectionKey.OP_READ);
-
-									/* Save the clientChannel for a specific pipe */
-									Client client = new Client(clientChannel);
-									map.put(pipe.source(), client);
-									mapClient.put(clientChannel, client);
-
-									/* URL of the request */
-									URL url = new URL(request[1]);
-									
-									/* Send the header response to the Client */
-									HttpURLConnection.setFollowRedirects(true);
-									HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-									StringBuilder sb = new StringBuilder();
-									for(int i=0; i<connection.getHeaderFields().size(); i++) {
-										String headerName = connection.getHeaderFieldKey(i);
-										if (headerName != null) {
-											if (headerName.compareToIgnoreCase("Content-Length") != 0 && 
-													headerName.compareToIgnoreCase("Transfer-­Encoding") != 0) {
-												sb.append(connection.getHeaderFieldKey(i));
-												sb.append(":");
-												sb.append(connection.getHeaderField(i));
-											}
-										}
-										else {
-											sb.append(connection.getHeaderField(i));
-										}
-										sb.append(" ");
+									else {
+										sb.append(connection.getHeaderField(i));
 									}
-									sb.append("Transfer-Encoding:chunked\r\n");
-									clientChannel.write(ByteBuffer.wrap(sb.toString().getBytes()));
-									
-									/* Start the download */
-									new Thread(new Download(pipe.sink(), url, request[0])).start();
+									sb.append("\r\n");
 								}
-								else {
-									System.out.println(line);
-								}
+								connection.disconnect();
+								sb.append("\r\n");
+								clientChannel.write(ByteBuffer.wrap(sb.toString().getBytes()));
+								
+								/* Start the download */
+								new Thread(new Download(pipe.sink(), url, request[0])).start();
 							}
 						}
+						
 						/* It's a pipe receive */
 						else if (selKey.channel() instanceof SourceChannel) {
 							SourceChannel pipeChannel = (SourceChannel)selKey.channel();
@@ -134,20 +136,12 @@ public class Qroxy {
 							if (pipeChannel.read(client.out) == -1) {
 								client.out.flip();
 								if (client.out.limit() != 0) {
-									ByteBuffer bb = ByteBuffer.allocate(20);
-									bb.put(Integer.toBinaryString(client.out.limit()).getBytes()).put("\r\n".getBytes());
-									bb.flip();
-									client.channel.write(bb);
-									client.out.put("\r\n".getBytes());
 									client.channel.write(client.out);
 								}
-								pipeChannel.close();
+								if (pipeChannel.isOpen())
+									pipeChannel.close();
 								mapClient.remove(map.get(pipeChannel));
 								map.remove(pipeChannel);
-								ByteBuffer end = ByteBuffer.allocate(20);
-								end.put("".getBytes()).put("\r\n".getBytes());
-								end.flip();
-								client.channel.write(end);
 								client.channel.close();
 								continue;
 							}
@@ -156,18 +150,16 @@ public class Qroxy {
 							client.channel.register(selector, SelectionKey.OP_WRITE);
 						}
 					}
+					
+					/* Client send */
 					if (selKey.isValid() && selKey.isWritable()) {
+						/* We send data to the client */
 						Client client = mapClient.get(selKey.channel());
 						client.out.flip();
-						if (client.out.limit() == 0) {
-							selKey.interestOps(SelectionKey.OP_READ);
+						if (!client.channel.isConnected() || !client.channel.isOpen()) {
+							client.channel.close();
 							continue;
 						}
-						ByteBuffer bb = ByteBuffer.allocate(20);
-						bb.put(Integer.toBinaryString(client.out.limit()).getBytes()).put("\r\n".getBytes());
-						bb.flip();
-						client.channel.write(bb);
-						client.out.put("\r\n".getBytes());
 						client.channel.write(client.out);
 						client.out.compact();
 						selKey.interestOps(SelectionKey.OP_READ);

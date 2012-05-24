@@ -12,6 +12,7 @@ public class Cache {
 		return instance;
 	}
 	
+	// TODO name too long
 	public void addContentToCache(ByteBuffer buffer, String url, String contentType, boolean append) throws IOException {
 		contentType = contentType.split(";")[0];
 		File contentTypeF = new File(contentType);

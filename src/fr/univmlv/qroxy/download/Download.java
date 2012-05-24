@@ -24,6 +24,13 @@ public class Download implements Runnable {
 		this.requestMethod = requestMethod;
 	}
 
+	/**
+	 * This method manage all content download from cache or server directly.
+	 * It will get information from HttpURLConnection and ask to the cache if it has the content. 
+	 * 
+	 * If it is in the cache, we pass the pipe to communicate with the main thread and the cache will send the content directly.
+	 * If it is NOT in the cache, we download the file from the server and send it to the cache (only if it is not private) and to the client. 
+	 */
 	@Override
 	public void run() {
 		HttpURLConnection connection = null;
@@ -35,12 +42,12 @@ public class Download implements Runnable {
 
 			// TODO check response code
 			if (connection.getResponseCode() != 200) {
-				StringBuilder sb = new StringBuilder("HTTP/1.0 ");
+				StringBuilder sb = new StringBuilder("HTTP/1.1 ");
 				sb.append(connection.getResponseCode()).append(" ");
-				sb.append(connection.getResponseMessage()).append("\n");
+				sb.append(connection.getResponseMessage()).append("\r\n");
 				ByteBuffer bb = ByteBuffer.wrap(sb.toString().getBytes());
 				channel.write(bb);
-				System.out.println("HTTP error");
+				System.out.println("HTTP error " + sb.toString());
 				return;
 			}
 
@@ -61,6 +68,7 @@ public class Download implements Runnable {
 				//return;
 			}
 
+			/* Cache privacy information and ask to the cache to freeing space for the content */
 			boolean caching = false;
 			String cacheControl = (connection.getHeaderField("Cache-Control") == null) ? "" : connection.getHeaderField("Cache-Control");
 			/* Check if you need to cache the file */
@@ -71,6 +79,7 @@ public class Download implements Runnable {
 						caching = true;
 					}
 					else {
+						// TODO we must inform the Logger that there are not enough space for this file
 						//System.out.println("No enough space for caching");
 					}
 				}
@@ -87,7 +96,8 @@ public class Download implements Runnable {
 				}
 			}
 			else {
-				System.out.println("Cache-control is private");
+				// Do nothing
+				//System.out.println("Cache-control is private");
 			}
 
 			/* Get content from url and send it to the cache and client */
@@ -99,37 +109,36 @@ public class Download implements Runnable {
 				cache.addContentToCache(ByteBuffer.wrap("".getBytes()), urlPath, contentType, false);
 
 			/* Declare download to BandwidthService */
-			//BandwidthService bandwidthService = BandwidthService.getInstance();
-			//bandwidthService.addADownloadWithURLAndType(urlPath, connection.getContentType());
+			BandwidthService bandwidthService = BandwidthService.getInstance();
+			bandwidthService.addADownloadWithURLAndType(urlPath, connection.getContentType());
 
 			/* Download the content */
 			while((readbyte = dis.read(buffer, 0, BUFFER_SIZE)) != -1 && readbyte != 0) {
 				ByteBuffer bb = ByteBuffer.wrap(buffer, 0, readbyte);
-				while(bb.hasRemaining()) {								
-					/* Send it to the client */
-					channel.write(bb);
+				
+				/* Send it to the client */
+				channel.write(bb);
 
-					/* Send it to the cache */
-					if (caching)
-						cache.addContentToCache(bb, urlPath, connection.getContentType(), true);
-
-					bb.remaining();
-				}
+				/* Send it to the cache */
+				if (caching)
+					cache.addContentToCache(bb, urlPath, connection.getContentType(), true);
+				
 				bb.clear();
 				buffer = new byte[BUFFER_SIZE];
 
 				/* Wait define time to respect bandwidth define by the content type */
-				/*try {
+				try {
 					Thread.sleep(bandwidthService.getTimeToWaitForURLAndType(urlPath, readbyte));
 				} catch (InterruptedException e) {
 					e.printStackTrace();
-				}*/
+				}
 			}
 			connection.disconnect();
 			channel.close();
 
 			/* Remove the download from the BandwidthService */
-			//bandwidthService.deleteDownloadWithURLAndType(urlPath);
+			bandwidthService.deleteDownloadWithURLAndType(urlPath);
+			
 		} catch (IOException e) {
 			System.out.println("la");
 			e.printStackTrace();

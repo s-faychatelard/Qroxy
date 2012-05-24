@@ -1,7 +1,7 @@
 package fr.univmlv.qroxy.bandwidthservice;
 
 import java.util.Date;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import fr.univmlv.qroxy.configuration.Configuration;
 
@@ -35,7 +35,7 @@ public class BandwidthService {
 	/**
 	 * Contain all current downloads represent by a DownloadBandwidth
 	 */
-	private final static HashMap<String, DownloadBandwidth> downloads = new HashMap<String, DownloadBandwidth>();
+	private final static ConcurrentHashMap<String, DownloadBandwidth> downloads = new ConcurrentHashMap<String, DownloadBandwidth>();
 	
 	/**
 	 * Get the instance of the BandwidthService
