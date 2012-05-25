@@ -45,9 +45,10 @@ public class TreeCacheNode {
 	}
 
 	public void removePath(String[] paths, int index) {
-		if(child.get(paths[index]).equals(paths[paths.length - 1])){
-			child.remove(paths[index]);
-		}
-		this.removePath(paths, index+1);
+		if(paths[index].equals(paths[paths.length - 1])){
+			System.out.println(child.remove(paths[index]));
+		}		
+		if (index+1 < paths.length)
+			this.removePath(paths, index+1);
 	}
 }

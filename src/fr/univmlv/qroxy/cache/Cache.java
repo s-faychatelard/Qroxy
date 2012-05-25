@@ -57,14 +57,16 @@ public class Cache {
 		return false;
 	}
 	
-	public boolean freeSpace(int neededSpace) {
+	public boolean freeSpace(long neededSpace) {
 		long size = 0;
-		while(size < (long)neededSpace){
+		while(size < neededSpace){
 			String filename = tree.getSmallerWeightPath();
+			System.out.println(filename);
 			File fileToDelete = new File(filename);
 			size = size + fileToDelete.length();
-			tree.removePath(filename);
-			fileToDelete.delete();
+			System.out.println(fileToDelete.length());
+			if(fileToDelete.delete())
+				tree.removePath(filename);
 		}
 		return true;
 	}
@@ -75,7 +77,8 @@ public class Cache {
 		buffer.putInt(60);
 		cache.addContentToCache(buffer, "http://www.facebook.com/joach/index.html", "text/html", false);
 		cache.addContentToCache(buffer, "http://www.facebook.com/index.html", "text/html", false);
-		//cache.addContentToCache(buffer, "http://www.facebook.com/joach/index.html", "text/html", true);
+		cache.addContentToCache(buffer, "http://www.google.com/index.html", "text/html", true);
 		System.out.println(cache.isInCache("http://www.facebook.com/joach/index.html", "text/html"));
+		System.out.println(cache.freeSpace(50));
 	}
 }
