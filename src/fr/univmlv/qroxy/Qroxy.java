@@ -104,7 +104,7 @@ public class Qroxy {
 								URL url = new URL(request[1]);
 								
 								/* Get end of request from client */
-								while(scanner.hasNextLine()) {
+								/*while(scanner.hasNextLine()) {
 									String l = scanner.nextLine();
 									if (l.contains("Connection")) {
 										if (l.contains("close")) {
@@ -112,7 +112,7 @@ public class Qroxy {
 										}
 									}
 									System.out.println(scanner.nextLine());
-								}
+								}*/
 								
 								/* Send the header response to the Client */
 								HttpURLConnection.setFollowRedirects(true);

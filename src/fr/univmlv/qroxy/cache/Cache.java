@@ -61,10 +61,8 @@ public class Cache {
 		long size = 0;
 		while(size < neededSpace){
 			String filename = tree.getSmallerWeightPath();
-			System.out.println(filename);
 			File fileToDelete = new File(filename);
 			size = size + fileToDelete.length();
-			System.out.println(fileToDelete.length());
 			if(fileToDelete.delete())
 				tree.removePath(filename);
 		}
@@ -73,12 +71,14 @@ public class Cache {
 	
 	public static void main(String[] args) throws IOException {
 		Cache cache = Cache.getInstance();
-		ByteBuffer buffer = ByteBuffer.allocate(10);
-		buffer.putInt(60);
+		ByteBuffer buffer = ByteBuffer.allocate(200);
+		buffer.put("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".getBytes());
 		cache.addContentToCache(buffer, "http://www.facebook.com/joach/index.html", "text/html", false);
 		cache.addContentToCache(buffer, "http://www.facebook.com/index.html", "text/html", false);
 		cache.addContentToCache(buffer, "http://www.google.com/index.html", "text/html", true);
 		System.out.println(cache.isInCache("http://www.facebook.com/joach/index.html", "text/html"));
-		System.out.println(cache.freeSpace(50));
+		System.out.println(cache.freeSpace(100));
+		System.out.println(cache.isInCache("http://www.google.com/index.html", "text/html"));
+		System.out.println(cache.isInCache("http://www.google.com/", "text/html"));
 	}
 }
