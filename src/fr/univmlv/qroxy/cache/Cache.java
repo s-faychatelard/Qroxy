@@ -3,6 +3,8 @@
 package fr.univmlv.qroxy.cache;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -43,8 +45,19 @@ public class Cache {
 		tree.addPath(arbo.toString()+url);
 	}
 	
-	public void getFromCache(String url, String contentType, Pipe.SinkChannel channel) {
-		
+	public void getFromCache(String url, String contentType, Pipe.SinkChannel channel) throws IOException {
+		ByteBuffer buffer = ByteBuffer.allocate(1024);
+		contentType = contentType.split(";")[0];
+		url = url.replace("://", "_");
+		StringBuilder filename = new StringBuilder(contentType).append("/").append(url);
+		File file =  new File(filename.toString());
+		FileInputStream input = new FileInputStream(file);
+		while(input.getChannel().read(buffer) != -1){
+			buffer.flip();
+			channel.write(buffer);
+			buffer.compact();
+		}
+		input.close();
 	}
 	
 	public boolean isUptodate(String url, String contentType){
