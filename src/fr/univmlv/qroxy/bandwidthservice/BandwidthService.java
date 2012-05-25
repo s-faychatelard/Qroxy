@@ -1,7 +1,7 @@
 package fr.univmlv.qroxy.bandwidthservice;
 
 import java.util.Date;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import fr.univmlv.qroxy.configuration.Configuration;
 
@@ -35,7 +35,7 @@ public class BandwidthService {
 	/**
 	 * Contain all current downloads represent by a DownloadBandwidth
 	 */
-	private final static HashMap<String, DownloadBandwidth> downloads = new HashMap<String, DownloadBandwidth>();
+	private final static ConcurrentHashMap<String, DownloadBandwidth> downloads = new ConcurrentHashMap<String, DownloadBandwidth>();
 	
 	/**
 	 * Get the instance of the BandwidthService
@@ -51,7 +51,7 @@ public class BandwidthService {
 	 * @param contentType of the download
 	 */
 	public void addADownloadWithURLAndType(String url, String contentType) {
-		downloads.put(url, new DownloadBandwidth(contentType, 2));
+		downloads.put(url, new DownloadBandwidth(contentType, 2000));
 	}
 	
 	/**
@@ -75,7 +75,7 @@ public class BandwidthService {
 		long endTime = new Date().getTime();
 		long duration = endTime - downloads.get(url).startTime;
 		this.recalculateBandwidth(url, contentSize);
-		System.out.println("PB : " + previousBandwidth + " NB : " + downloads.get(url).currentBandwidth);
+		//System.out.println("PB : " + previousBandwidth + " NB : " + downloads.get(url).currentBandwidth);
 		int timeToWait = (int)(((double)contentSize/(double)previousBandwidth) - duration);
 		return (timeToWait < 0) ? 0 :  timeToWait;
 	}
@@ -94,13 +94,13 @@ public class BandwidthService {
 		downloads.get(url).startTime = endTime;
 		double diffBandwidth = ((double)contentSize/(double)duration) - theoricalBandwith;
 
-		/* Do not recalculate if it is the first loop, all calcule will be false */
+		/* Do not recalculate if it is the first loop, all operations will be false */
 		if (theoricalBandwith == 0) {
 			theoricalBandwith = ((double)contentSize/(double)duration);
 			return;
 		}
 
-		/* Caculate global weight of current downloads */
+		/* Calculate global weight of current downloads */
 		int globalWeight=0;
 		for (DownloadBandwidth db : downloads.values()) {
 			if (db.currentBandwidth >= db.maxBandwidth) continue;
@@ -115,8 +115,8 @@ public class BandwidthService {
 
 		/* Save the theorical bandwidth for further use */
 		theoricalBandwith = ((double)contentSize/(double)duration);
-		System.out.println("Theorical bandwith : " + theoricalBandwith + " ko/s");
-		System.out.println("Theorical diff of bandwith : " + diffBandwidth + " ko/s");
+		//System.out.println("Theorical bandwith : " + theoricalBandwith + " ko/s");
+		//System.out.println("Theorical diff of bandwith : " + diffBandwidth + " ko/s");
 	}
 
 	public static void main(String[] args) {
