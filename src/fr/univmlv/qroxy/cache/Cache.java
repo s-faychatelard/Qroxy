@@ -46,7 +46,7 @@ public class Cache {
 	}
 	
 	public void getFromCache(String url, String contentType, Pipe.SinkChannel channel) throws IOException {
-		ByteBuffer buffer = ByteBuffer.allocate(1024);
+		ByteBuffer buffer = ByteBuffer.allocate(16192);
 		contentType = contentType.split(";")[0];
 		url = url.replace("://", "_");
 		StringBuilder filename = new StringBuilder(contentType).append("/").append(url);
@@ -57,6 +57,7 @@ public class Cache {
 			channel.write(buffer);
 			buffer.compact();
 		}
+		channel.close();
 		input.close();
 	}
 	
@@ -76,14 +77,14 @@ public class Cache {
 	}
 	
 	public boolean freeSpace(long neededSpace) {
-		long size = 0;
+		/*long size = 0;
 		while(size < neededSpace){
 			String filename = tree.getSmallerWeightPath();
 			File fileToDelete = new File(filename);
 			size = size + fileToDelete.length();
 			if(fileToDelete.delete())
 				tree.removePath(filename);
-		}
+		}*/
 		return true;
 	}
 	

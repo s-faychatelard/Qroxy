@@ -20,7 +20,7 @@ import fr.univmlv.qroxy.download.Download;
 public class Qroxy {
 
 	private ServerSocketChannel channel;
-	private final static int BUFFER_SIZE = 1024;
+	private final static int BUFFER_SIZE = 16192;
 	
 	//TODO add limit of number of download thread
 	
@@ -150,10 +150,15 @@ public class Qroxy {
 							if (pipeChannel.read(client.out) == -1) {
 								client.out.flip();
 								if (client.out.limit() != 0) {
-									client.channel.write(client.out);
+									try {
+										client.channel.write(client.out);
+									} catch (IOException e) {
+										client.channel.close();
+									}
 								}
 								if (pipeChannel.isOpen())
 									pipeChannel.close();
+								selKey.cancel();
 								mapClient.remove(map.get(pipeChannel));
 								map.remove(pipeChannel);
 								client.channel.close();
@@ -161,7 +166,8 @@ public class Qroxy {
 							}
 
 							/* Register has available for writing*/
-							client.channel.register(selector, SelectionKey.OP_WRITE);
+							if (client.channel.isConnected() && client.channel.isOpen())
+								client.channel.register(selector, SelectionKey.OP_WRITE);
 						}
 					}
 					
@@ -175,7 +181,15 @@ public class Qroxy {
 							continue;
 						}
 						//TODO Broken pipe
-						client.channel.write(client.out);
+						try {
+							client.channel.write(client.out);
+						} catch (IOException e) {
+							client.channel.close();
+							selKey.cancel();
+							map.remove(mapClient.get(client.channel));
+							mapClient.remove(client.channel);
+							continue;
+						}
 						client.out.compact();
 						selKey.interestOps(SelectionKey.OP_READ);
 					}

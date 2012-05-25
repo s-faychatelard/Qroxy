@@ -13,7 +13,7 @@ import fr.univmlv.qroxy.cache.Cache;
 
 public class Download implements Runnable {
 
-	private final static int BUFFER_SIZE = 1024;
+	private final static int BUFFER_SIZE = 16192;
 	private final Pipe.SinkChannel channel;
 	private final HttpURLConnection urlConnection;
 
