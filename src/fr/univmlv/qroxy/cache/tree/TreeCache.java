@@ -8,6 +8,11 @@ public class TreeCache {
 		root.addChild(paths, 0);
 	}
 
+	public void removePath(String path){
+		String[] paths = path.split("/");
+		root.removePath(paths, 0);
+	}
+	
 	public String getSmallerWeightPath() {
 		return root.getSmallerWeightPath();
 	}
@@ -22,6 +27,7 @@ public class TreeCache {
 		tree.addPath("text/html/http_www.apple.fr/index.html");
 		tree.addPath("text/html/http_www.apple.fr/index.html");
 		tree.addPath("text/html/http_www.apple.fr/index.html");
+		tree.removePath("text/html/http_www.google.fr/index.html");
 		System.out.println(tree.getSmallerWeightPath());
 	}
 }
