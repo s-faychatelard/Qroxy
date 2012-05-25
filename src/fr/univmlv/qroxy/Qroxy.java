@@ -103,6 +103,7 @@ public class Qroxy {
 								/* Send the header response to the Client */
 								HttpURLConnection.setFollowRedirects(true);
 								HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+								connection.setRequestMethod(request[0]);
 								StringBuilder sb = new StringBuilder();
 								for(int i=0; i<connection.getHeaderFields().size(); i++) {
 									String headerName = connection.getHeaderFieldKey(i);
@@ -116,12 +117,11 @@ public class Qroxy {
 									}
 									sb.append("\r\n");
 								}
-								connection.disconnect();
 								sb.append("\r\n");
 								clientChannel.write(ByteBuffer.wrap(sb.toString().getBytes()));
 								
 								/* Start the download */
-								new Thread(new Download(pipe.sink(), url, request[0])).start();
+								new Thread(new Download(pipe.sink(), connection)).start();
 							}
 						}
 						
@@ -160,6 +160,7 @@ public class Qroxy {
 							client.channel.close();
 							continue;
 						}
+						//TODO Broken pipe
 						client.channel.write(client.out);
 						client.out.compact();
 						selKey.interestOps(SelectionKey.OP_READ);

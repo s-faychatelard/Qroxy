@@ -15,13 +15,11 @@ public class Download implements Runnable {
 
 	private final static int BUFFER_SIZE = 1024;
 	private final Pipe.SinkChannel channel;
-	private final URL url;
-	private final String requestMethod;
+	private final HttpURLConnection urlConnection;
 
-	public Download(Pipe.SinkChannel channel, URL url, String requestMethod) {
+	public Download(Pipe.SinkChannel channel, HttpURLConnection urlConnection) {
 		this.channel = channel;
-		this.url = url;
-		this.requestMethod = requestMethod;
+		this.urlConnection = urlConnection;
 	}
 
 	/**
@@ -33,18 +31,13 @@ public class Download implements Runnable {
 	 */
 	@Override
 	public void run() {
-		HttpURLConnection connection = null;
 		try {
 			/* Get informations */
-			HttpURLConnection.setFollowRedirects(true);
-			connection = (HttpURLConnection)url.openConnection();
-			connection.setRequestMethod(this.requestMethod);
-
 			// TODO check response code
-			if (connection.getResponseCode() != 200) {
+			if (urlConnection.getResponseCode() != 200) {
 				StringBuilder sb = new StringBuilder("HTTP/1.1 ");
-				sb.append(connection.getResponseCode()).append(" ");
-				sb.append(connection.getResponseMessage()).append("\r\n");
+				sb.append(urlConnection.getResponseCode()).append(" ");
+				sb.append(urlConnection.getResponseMessage()).append("\r\n");
 				ByteBuffer bb = ByteBuffer.wrap(sb.toString().getBytes());
 				channel.write(bb);
 				System.out.println("HTTP error " + sb.toString());
@@ -52,17 +45,17 @@ public class Download implements Runnable {
 			}
 
 			/* Format url informations and send it to the client */
-			String file = connection.getURL().getFile();
+			String file = urlConnection.getURL().getFile();
 			if (file == "" || file.compareTo("/") == 0)
 				file = "/index.html";
-			String urlPath = connection.getURL().getProtocol() + "://" + connection.getURL().getHost() + file;
-			String contentType = connection.getContentType();
+			String urlPath = urlConnection.getURL().getProtocol() + "://" + urlConnection.getURL().getHost() + file;
+			String contentType = urlConnection.getContentType();
 
 			/* Prepare cache */
 			Cache cache = Cache.getInstance();
 
 			/* Check if the content is not already in the cache */
-			if (cache.isInCache(urlPath, connection.getContentType())) {
+			if (cache.isInCache(urlPath, urlConnection.getContentType())) {
 				// Get from cache
 				//System.out.println("Content is in cache");
 				//return;
@@ -70,11 +63,11 @@ public class Download implements Runnable {
 
 			/* Cache privacy information and ask to the cache to freeing space for the content */
 			boolean caching = false;
-			String cacheControl = (connection.getHeaderField("Cache-Control") == null) ? "" : connection.getHeaderField("Cache-Control");
+			String cacheControl = (urlConnection.getHeaderField("Cache-Control") == null) ? "" : urlConnection.getHeaderField("Cache-Control");
 			/* Check if you need to cache the file */
 			if (cacheControl.contains("private") == false) {
-				if (connection.getContentLength() != -1) {
-					if (cache.freeSpace(connection.getContentLength())) {
+				if (urlConnection.getContentLength() != -1) {
+					if (cache.freeSpace(urlConnection.getContentLength())) {
 						//System.out.println("Space clear for caching");
 						caching = true;
 					}
@@ -101,7 +94,7 @@ public class Download implements Runnable {
 			}
 
 			/* Get content from url and send it to the cache and client */
-			DataInputStream dis = new DataInputStream(connection.getInputStream());
+			DataInputStream dis = new DataInputStream(urlConnection.getInputStream());
 			byte[] buffer = new byte[BUFFER_SIZE];
 			int readbyte = 0;
 
@@ -110,7 +103,7 @@ public class Download implements Runnable {
 
 			/* Declare download to BandwidthService */
 			BandwidthService bandwidthService = BandwidthService.getInstance();
-			bandwidthService.addADownloadWithURLAndType(urlPath, connection.getContentType());
+			bandwidthService.addADownloadWithURLAndType(urlPath, urlConnection.getContentType());
 
 			/* Download the content */
 			while((readbyte = dis.read(buffer, 0, BUFFER_SIZE)) != -1 && readbyte != 0) {
@@ -121,7 +114,7 @@ public class Download implements Runnable {
 
 				/* Send it to the cache */
 				if (caching)
-					cache.addContentToCache(bb, urlPath, connection.getContentType(), true);
+					cache.addContentToCache(bb, urlPath, urlConnection.getContentType(), true);
 				
 				bb.clear();
 				buffer = new byte[BUFFER_SIZE];
@@ -133,7 +126,7 @@ public class Download implements Runnable {
 					e.printStackTrace();
 				}
 			}
-			connection.disconnect();
+			urlConnection.disconnect();
 			channel.close();
 
 			/* Remove the download from the BandwidthService */
@@ -155,7 +148,11 @@ public class Download implements Runnable {
 			Pipe pipe = Pipe.open();
 
 			/* Start the download */
-			new Thread(new Download(pipe.sink(), new URL("http://google.fr/search?q=Robert+Moog&oi=ddle&ct=moog12-hp"), "GET")).start();
+			URL url = new URL("http://www.google.fr");
+			HttpURLConnection.setFollowRedirects(true);
+			HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+			connection.setRequestMethod("GET");
+			new Thread(new Download(pipe.sink(), connection)).start();
 
 			/* On receiving data from the pipe, you can send directly to the client */
 			ByteBuffer bb = ByteBuffer.allocateDirect(BUFFER_SIZE);
