@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Pipe;
 
 import fr.univmlv.qroxy.cache.tree.TreeCache;
 
@@ -40,6 +41,10 @@ public class Cache {
 		output.flush();
 		output.close();
 		tree.addPath(arbo.toString()+url);
+	}
+	
+	public void getFromCache(String url, String contentType, Pipe.SinkChannel channel) {
+		
 	}
 	
 	public boolean isUptodate(String url, String contentType){

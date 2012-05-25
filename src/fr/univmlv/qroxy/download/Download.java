@@ -57,8 +57,8 @@ public class Download implements Runnable {
 			/* Check if the content is not already in the cache */
 			if (cache.isInCache(urlPath, urlConnection.getContentType())) {
 				// Get from cache
-				//System.out.println("Content is in cache");
-				//return;
+				cache.getFromCache(urlPath, urlConnection.getContentType(), this.channel);
+				return;
 			}
 
 			/* Cache privacy information and ask to the cache to freeing space for the content */
