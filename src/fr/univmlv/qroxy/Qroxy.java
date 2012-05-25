@@ -22,6 +22,8 @@ public class Qroxy {
 	private ServerSocketChannel channel;
 	private final static int BUFFER_SIZE = 1024;
 	
+	//TODO add limit of number of download thread
+	
 	/**
 	 * Private class for managing a buffer for each specific client
 	 */
@@ -36,6 +38,7 @@ public class Qroxy {
 
 	/**
 	 * Create the Qroxy server and launch it
+	 * 
 	 * @param remotePort the listening port of the Qroxy
 	 */
 	public Qroxy(int remotePort)  {
@@ -99,6 +102,17 @@ public class Qroxy {
 
 								/* URL of the request */
 								URL url = new URL(request[1]);
+								
+								/* Get end of request from client */
+								while(scanner.hasNextLine()) {
+									String l = scanner.nextLine();
+									if (l.contains("Connection")) {
+										if (l.contains("close")) {
+											
+										}
+									}
+									System.out.println(scanner.nextLine());
+								}
 								
 								/* Send the header response to the Client */
 								HttpURLConnection.setFollowRedirects(true);
