@@ -13,7 +13,7 @@ import fr.univmlv.qroxy.cache.Cache;
 
 public class Download implements Runnable {
 
-	private final static int BUFFER_SIZE = 16192;
+	private final static int BUFFER_SIZE = 262144;
 	private final Pipe.SinkChannel channel;
 	private final HttpURLConnection urlConnection;
 
@@ -33,7 +33,7 @@ public class Download implements Runnable {
 	public void run() {
 		try {
 			/* Get informations */
-			// TODO check response code
+			// TODO treat response code
 			if (urlConnection.getResponseCode() != 200) {
 				StringBuilder sb = new StringBuilder("HTTP/1.1 ");
 				sb.append(urlConnection.getResponseCode()).append(" ");
@@ -117,7 +117,6 @@ public class Download implements Runnable {
 					cache.addContentToCache(bb, urlPath, urlConnection.getContentType(), true);
 				
 				bb.clear();
-				buffer = new byte[BUFFER_SIZE];
 
 				/* Wait define time to respect bandwidth define by the content type */
 				try {
@@ -133,7 +132,6 @@ public class Download implements Runnable {
 			bandwidthService.deleteDownloadWithURLAndType(urlPath);
 			
 		} catch (IOException e) {
-			System.out.println("la");
 			e.printStackTrace();
 		}
 	}

@@ -46,7 +46,7 @@ public class Cache {
 	}
 	
 	public void getFromCache(String url, String contentType, Pipe.SinkChannel channel) throws IOException {
-		ByteBuffer buffer = ByteBuffer.allocate(16192);
+		ByteBuffer buffer = ByteBuffer.allocate(262144);
 		contentType = contentType.split(";")[0];
 		url = url.replace("://", "_");
 		StringBuilder filename = new StringBuilder(contentType).append("/").append(url);
