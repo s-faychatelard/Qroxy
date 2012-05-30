@@ -7,6 +7,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
+import java.util.HashMap;
+import java.util.Map;
 
 import fr.univmlv.qroxy.bandwidthservice.BandwidthService;
 import fr.univmlv.qroxy.cache.Cache;
@@ -18,11 +20,13 @@ public class Download implements Runnable {
 	private HttpURLConnection urlConnection;
 	private final URL url;
 	private final String requestType;
+	private final Map<String, String> properties;
 
-	public Download(Pipe.SinkChannel channel, URL url, String requestType) {
+	public Download(Pipe.SinkChannel channel, URL url, String requestType, Map<String, String> properties) {
 		this.channel = channel;
 		this.url = url;
 		this.requestType = requestType;
+		this.properties = properties;
 	}
 
 	/**
@@ -38,13 +42,20 @@ public class Download implements Runnable {
 			
 			/* Send the header response to the Client */
 			HttpURLConnection.setFollowRedirects(true);
-			HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-			connection.setRequestMethod(requestType);
-			StringBuilder sb = new StringBuilder(connection.getHeaderField(0));
-			int nbFields = connection.getHeaderFields().size();
+			urlConnection = (HttpURLConnection)url.openConnection();
+			urlConnection.setRequestMethod(requestType);
+			for (String key : properties.keySet()) {
+				if(key.compareTo("Accept-Encoding") == 0)
+					continue;
+				urlConnection.setRequestProperty(key, properties.get(key));
+				System.out.println(key + " " + properties.get(key));
+			}
+			
+			StringBuilder sb = new StringBuilder(urlConnection.getHeaderField(0));
+			int nbFields = urlConnection.getHeaderFields().size();
 			for(int i=1; i<nbFields; i++) {
-				sb.append(connection.getHeaderFieldKey(i)).append("=");
-				sb.append(connection.getHeaderField(i)).append("\r\n");
+				sb.append(urlConnection.getHeaderFieldKey(i)).append("=");
+				sb.append(urlConnection.getHeaderField(i)).append("\r\n");
 			}
 			sb.append("\r\n");
 			channel.write(ByteBuffer.wrap(sb.toString().getBytes()));
@@ -164,7 +175,7 @@ public class Download implements Runnable {
 
 			/* Start the download */
 			URL url = new URL("http://www.google.fr");
-			new Thread(new Download(pipe.sink(), url, "GET")).start();
+			new Thread(new Download(pipe.sink(), url, "GET", new HashMap<String, String>())).start();
 
 			/* On receiving data from the pipe, you can send directly to the client */
 			ByteBuffer bb = ByteBuffer.allocateDirect(BUFFER_SIZE);

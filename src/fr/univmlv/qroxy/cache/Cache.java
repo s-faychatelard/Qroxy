@@ -17,11 +17,11 @@ import fr.univmlv.qroxy.cache.tree.TreeCache;
 public class Cache {
 	private final static Cache instance = new Cache();
 	private TreeCache tree = new TreeCache();
-	
+
 	public static Cache getInstance() {
 		return instance;
 	}
-	
+
 	// TODO name too long
 	// TODO not a directory
 	public void addContentToCache(ByteBuffer buffer, String url, String contentType, boolean append) throws IOException {
@@ -48,7 +48,11 @@ public class Cache {
 			File rep = new File(arbo.toString());
 			rep.mkdir();
 		}
-		File file = new File(arbo.toString(), sha1.toString());
+		StringBuilder hexSha1 = new StringBuilder();
+		for (int i=0;i<sha1.length;i++) {
+			hexSha1.append(Integer.toHexString(0xFF & sha1[i]));
+		}
+		File file = new File(arbo.toString(), hexSha1.toString());
 		FileOutputStream output = new FileOutputStream(file, append);
 		buffer.flip();
 		output.getChannel().write(buffer);
@@ -56,7 +60,7 @@ public class Cache {
 		output.close();
 		tree.addPath(arbo.toString()+url);
 	}
-	
+
 	public void getFromCache(String url, String contentType, Pipe.SinkChannel channel) throws IOException {
 		ByteBuffer buffer = ByteBuffer.allocate(262144);
 		contentType = contentType.split(";")[0];
@@ -72,11 +76,11 @@ public class Cache {
 		channel.close();
 		input.close();
 	}
-	
+
 	public boolean isUptodate(String url, String contentType){
 		return true;
 	}
-	
+
 	public boolean isInCache(String url, String contentType) {
 		//TODO contentType can be null
 		contentType = contentType.split(";")[0];
@@ -87,7 +91,7 @@ public class Cache {
 			return this.isUptodate(url, contentType);
 		return false;
 	}
-	
+
 	public boolean freeSpace(long neededSpace) {
 		/*long size = 0;
 		while(size < neededSpace){
@@ -99,7 +103,7 @@ public class Cache {
 		}*/
 		return true;
 	}
-	
+
 	public static void main(String[] args) throws IOException, NoSuchAlgorithmException {
 		Cache cache = Cache.getInstance();
 		ByteBuffer buffer = ByteBuffer.allocate(200);
