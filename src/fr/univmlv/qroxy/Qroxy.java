@@ -11,6 +11,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.Pipe.SourceChannel;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Scanner;
@@ -20,7 +21,7 @@ import fr.univmlv.qroxy.download.Download;
 public class Qroxy {
 
 	private ServerSocketChannel channel;
-	private final static int BUFFER_SIZE = 1024;
+	private final static int BUFFER_SIZE = 262144;
 	
 	//TODO add limit of number of download thread
 	
@@ -103,37 +104,19 @@ public class Qroxy {
 								/* URL of the request */
 								URL url = new URL(request[1]);
 								
-								/* Get end of request from client */
-								/*while(scanner.hasNextLine()) {
-									String l = scanner.nextLine();
-									if (l.contains("Connection")) {
-										if (l.contains("close")) {
-											
-										}
-									}
-									System.out.println(scanner.nextLine());
-								}*/
-								
 								/* Send the header response to the Client */
 								HttpURLConnection.setFollowRedirects(true);
 								HttpURLConnection connection = (HttpURLConnection)url.openConnection();
 								connection.setRequestMethod(request[0]);
-								StringBuilder sb = new StringBuilder();
-								for(int i=0; i<connection.getHeaderFields().size(); i++) {
-									String headerName = connection.getHeaderFieldKey(i);
-									if (headerName != null) {
-										sb.append(connection.getHeaderFieldKey(i));
-										sb.append("=");
-										sb.append(connection.getHeaderField(i));
-									}
-									else {
-										sb.append(connection.getHeaderField(i));
-									}
-									sb.append("\r\n");
+								StringBuilder sb = new StringBuilder(connection.getHeaderField(0));
+								int nbFields = connection.getHeaderFields().size();
+								for(int i=1; i<nbFields; i++) {
+									sb.append(connection.getHeaderFieldKey(i)).append("=");
+									sb.append(connection.getHeaderField(i)).append("\r\n");
 								}
 								sb.append("\r\n");
+								/* We can write because we know that the channel is free to write */
 								clientChannel.write(ByteBuffer.wrap(sb.toString().getBytes()));
-								
 								/* Start the download */
 								new Thread(new Download(pipe.sink(), connection)).start();
 							}
@@ -150,10 +133,15 @@ public class Qroxy {
 							if (pipeChannel.read(client.out) == -1) {
 								client.out.flip();
 								if (client.out.limit() != 0) {
-									client.channel.write(client.out);
+									try {
+										client.channel.write(client.out);
+									} catch (IOException e) {
+										client.channel.close();
+									}
 								}
 								if (pipeChannel.isOpen())
 									pipeChannel.close();
+								selKey.cancel();
 								mapClient.remove(map.get(pipeChannel));
 								map.remove(pipeChannel);
 								client.channel.close();
@@ -161,7 +149,8 @@ public class Qroxy {
 							}
 
 							/* Register has available for writing*/
-							client.channel.register(selector, SelectionKey.OP_WRITE);
+							if (client.channel.isConnected() && client.channel.isOpen())
+								client.channel.register(selector, SelectionKey.OP_WRITE);
 						}
 					}
 					
@@ -175,7 +164,15 @@ public class Qroxy {
 							continue;
 						}
 						//TODO Broken pipe
-						client.channel.write(client.out);
+						try {
+							client.channel.write(client.out);
+						} catch (IOException e) {
+							client.channel.close();
+							selKey.cancel();
+							map.remove(mapClient.get(client.channel));
+							mapClient.remove(client.channel);
+							continue;
+						}
 						client.out.compact();
 						selKey.interestOps(SelectionKey.OP_READ);
 					}
