@@ -9,6 +9,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 import fr.univmlv.qroxy.cache.tree.TreeCache;
 
@@ -28,6 +30,16 @@ public class Cache {
 		url = url.replace("://", "_");
 		String[] f = url.split("/");
 		url = f[f.length -1];
+		MessageDigest md = null;
+		try {
+			md = MessageDigest.getInstance("SHA-1");
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		byte[] sha1 = new byte[40];
+		md.update(url.getBytes(), 0, url.length());
+		sha1 = md.digest();
 		StringBuilder arbo = new StringBuilder();
 		contentTypeF.mkdirs();
 		arbo.append(contentType).append("/");
@@ -36,7 +48,7 @@ public class Cache {
 			File rep = new File(arbo.toString());
 			rep.mkdir();
 		}
-		File file = new File(arbo.toString(), url);
+		File file = new File(arbo.toString(), sha1.toString());
 		FileOutputStream output = new FileOutputStream(file, append);
 		buffer.flip();
 		output.getChannel().write(buffer);
@@ -87,7 +99,7 @@ public class Cache {
 		return true;
 	}
 	
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, NoSuchAlgorithmException {
 		Cache cache = Cache.getInstance();
 		ByteBuffer buffer = ByteBuffer.allocate(200);
 		buffer.put("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".getBytes());
