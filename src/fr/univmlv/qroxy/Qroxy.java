@@ -11,7 +11,6 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.Pipe.SourceChannel;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Scanner;
@@ -103,22 +102,9 @@ public class Qroxy {
 
 								/* URL of the request */
 								URL url = new URL(request[1]);
-								
-								/* Send the header response to the Client */
-								HttpURLConnection.setFollowRedirects(true);
-								HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-								connection.setRequestMethod(request[0]);
-								StringBuilder sb = new StringBuilder(connection.getHeaderField(0));
-								int nbFields = connection.getHeaderFields().size();
-								for(int i=1; i<nbFields; i++) {
-									sb.append(connection.getHeaderFieldKey(i)).append("=");
-									sb.append(connection.getHeaderField(i)).append("\r\n");
-								}
-								sb.append("\r\n");
-								/* We can write because we know that the channel is free to write */
-								clientChannel.write(ByteBuffer.wrap(sb.toString().getBytes()));
+
 								/* Start the download */
-								new Thread(new Download(pipe.sink(), connection)).start();
+								new Thread(new Download(pipe.sink(), url, request[0])).start();
 							}
 						}
 						
