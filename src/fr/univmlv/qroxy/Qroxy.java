@@ -1,7 +1,6 @@
 package fr.univmlv.qroxy;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -11,9 +10,9 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.Pipe.SourceChannel;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Scanner;
 
 import fr.univmlv.qroxy.download.Download;
@@ -22,18 +21,20 @@ public class Qroxy {
 
 	private ServerSocketChannel channel;
 	private final static int BUFFER_SIZE = 262144;
-	
+
 	//TODO add limit of number of download thread
-	
+
 	/**
 	 * Private class for managing a buffer for each specific client
 	 */
 	private static class Client {
 		public ByteBuffer out = ByteBuffer.allocate(BUFFER_SIZE);
 		public SocketChannel channel;
-		
-		public Client(SocketChannel channel) {
+		public Download download;
+
+		public Client(SocketChannel channel, Download download) {
 			this.channel = channel;
+			this.download = download;
 		}
 	}
 
@@ -60,36 +61,69 @@ public class Qroxy {
 			/* We create correspondence between a pipe and a socket client in both way */
 			HashMap<SourceChannel, Client> map = new HashMap<SourceChannel, Client>();
 			HashMap<SocketChannel, Client> mapClient = new HashMap<SocketChannel, Client>();
-	
+
 			Selector selector;
 			selector = Selector.open();
 			channel.register(selector, SelectionKey.OP_ACCEPT);
 			while (true) {
-				selector.select();
+				if (selector.select(5000) == 0) {
+					// TODO kill all current client no more things to do
+					for (SourceChannel key : map.keySet()) {
+						key.close();
+						Client client = mapClient.get(key);
+						System.out.println("Kill " + client.channel.getRemoteAddress());
+						if (client != null)
+							client.channel.close();
+						map.clear();
+						mapClient.clear();
+					}
+					System.out.println("Timeout");
+					continue;
+				}
 				Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 				while (it.hasNext()) {
 					SelectionKey selKey = (SelectionKey)it.next();
 					it.remove();
-					
+
 					/* Client connection */
 					if (selKey.isValid() && selKey.isAcceptable()) {
 						ServerSocketChannel sChannel = (ServerSocketChannel)selKey.channel();
 						SocketChannel clientChannel = sChannel.accept();
 						clientChannel.configureBlocking(false);
+						System.out.println("Accept " + clientChannel.getRemoteAddress());
 						clientChannel.register(selector, SelectionKey.OP_READ);
 					}
-					
+
 					/* Client receive */
 					if (selKey.isValid() && selKey.isReadable()) {
-						
+
 						/* It's a client request */
 						if (!(selKey.channel() instanceof SourceChannel)) {
 							SocketChannel clientChannel = (SocketChannel)selKey.channel();
 							Scanner scanner = new Scanner(clientChannel);
 
 							if (scanner.hasNextLine()) {
+								//System.out.println("Read " + clientChannel.getRemoteAddress());
 								String line = scanner.nextLine();
 								String[] request = line.split(" ");
+
+								/* Get request attributes */
+								Map<String, String> properties = new HashMap<String, String>();
+								while(scanner.hasNextLine()) {
+									line = scanner.nextLine();
+									if (line.length() <= 2) {
+										break;
+									}
+									int index = line.indexOf(':');
+									String key = line.substring(0, index);
+									if(line.charAt(index+1) == ' ')
+										index++;
+									String value = line.substring(index+1, line.length());
+									properties.put(key, value);
+								}
+								
+								/* URL of the request */
+								URL url = new URL(request[1]);
 								
 								/* Create a pipe to communicate with the thread */
 								Pipe pipe = Pipe.open();
@@ -97,31 +131,15 @@ public class Qroxy {
 								pipe.source().register(selector, SelectionKey.OP_READ);
 
 								/* Save the clientChannel for a specific pipe */
-								Client client = new Client(clientChannel);
+								Client client = new Client(clientChannel, new Download(pipe.sink(), url, request[0], properties));
 								map.put(pipe.source(), client);
 								mapClient.put(clientChannel, client);
 
-								/* URL of the request */
-								URL url = new URL(request[1]);
-								
-								/* Send the header response to the Client */
-								HttpURLConnection.setFollowRedirects(true);
-								HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-								connection.setRequestMethod(request[0]);
-								StringBuilder sb = new StringBuilder(connection.getHeaderField(0));
-								int nbFields = connection.getHeaderFields().size();
-								for(int i=1; i<nbFields; i++) {
-									sb.append(connection.getHeaderFieldKey(i)).append("=");
-									sb.append(connection.getHeaderField(i)).append("\r\n");
-								}
-								sb.append("\r\n");
-								/* We can write because we know that the channel is free to write */
-								clientChannel.write(ByteBuffer.wrap(sb.toString().getBytes()));
 								/* Start the download */
-								new Thread(new Download(pipe.sink(), connection)).start();
+								new Thread(client.download).start();
 							}
 						}
-						
+
 						/* It's a pipe receive */
 						else if (selKey.channel() instanceof SourceChannel) {
 							SourceChannel pipeChannel = (SourceChannel)selKey.channel();
@@ -144,7 +162,12 @@ public class Qroxy {
 								selKey.cancel();
 								mapClient.remove(map.get(pipeChannel));
 								map.remove(pipeChannel);
-								client.channel.close();
+								//TODO do not close if Connection: keep-alive
+								//System.out.println("End of pipe " + client.download.getKeepAlive());
+								if (!client.download.getKeepAlive()) {
+									//System.out.println("Close " + client.channel.getRemoteAddress());
+									client.channel.close();
+								}
 								continue;
 							}
 
@@ -153,7 +176,7 @@ public class Qroxy {
 								client.channel.register(selector, SelectionKey.OP_WRITE);
 						}
 					}
-					
+
 					/* Client send */
 					if (selKey.isValid() && selKey.isWritable()) {
 						/* We send data to the client */

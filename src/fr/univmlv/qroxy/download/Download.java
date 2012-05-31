@@ -7,6 +7,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
+import java.util.HashMap;
+import java.util.Map;
 
 import fr.univmlv.qroxy.bandwidthservice.BandwidthService;
 import fr.univmlv.qroxy.cache.Cache;
@@ -15,11 +17,22 @@ public class Download implements Runnable {
 
 	private final static int BUFFER_SIZE = 262144;
 	private final Pipe.SinkChannel channel;
-	private final HttpURLConnection urlConnection;
+	private HttpURLConnection urlConnection;
+	private final URL url;
+	private final String requestType;
+	private final Map<String, String> properties;
+	private volatile boolean keepAlive;
 
-	public Download(Pipe.SinkChannel channel, HttpURLConnection urlConnection) {
+	public Download(Pipe.SinkChannel channel, URL url, String requestType, Map<String, String> properties) {
 		this.channel = channel;
-		this.urlConnection = urlConnection;
+		this.url = url;
+		this.requestType = requestType;
+		this.properties = properties;
+		this.keepAlive = false;
+	}
+	
+	public boolean getKeepAlive() {
+		return this.keepAlive;
 	}
 
 	/**
@@ -32,15 +45,39 @@ public class Download implements Runnable {
 	@Override
 	public void run() {
 		try {
+			
+			/* Send the header response to the Client */
+			HttpURLConnection.setFollowRedirects(true);
+			urlConnection = (HttpURLConnection)url.openConnection();
+			urlConnection.setRequestMethod(requestType);
+			for (String key : properties.keySet()) {
+				urlConnection.setRequestProperty(key, properties.get(key));
+			}
+			
+			StringBuilder sb = new StringBuilder(urlConnection.getHeaderField(0)).append("\r\n");
+			int nbFields = urlConnection.getHeaderFields().size();
+			for(int i=1; i<nbFields; i++) {
+				sb.append(urlConnection.getHeaderFieldKey(i)).append(": ");
+				sb.append(urlConnection.getHeaderField(i)).append("\r\n");
+			}
+			sb.append("\r\n");
+			//System.out.println(sb.toString());
+			channel.write(ByteBuffer.wrap(sb.toString().getBytes()));
+			
+			String keep = urlConnection.getHeaderField("Connection");
+			if (keep != null && keep.compareTo("close") == 0)
+				keepAlive = false;
+			else
+				keepAlive = true;
+			
 			/* Get informations */
 			// TODO treat response code
 			if (urlConnection.getResponseCode() != 200) {
-				StringBuilder sb = new StringBuilder("HTTP/1.1 ");
+				sb = new StringBuilder("HTTP/1.1 ");
 				sb.append(urlConnection.getResponseCode()).append(" ");
 				sb.append(urlConnection.getResponseMessage()).append("\r\n");
 				ByteBuffer bb = ByteBuffer.wrap(sb.toString().getBytes());
 				channel.write(bb);
-				System.out.println("HTTP error " + sb.toString());
 				return;
 			}
 
@@ -147,10 +184,7 @@ public class Download implements Runnable {
 
 			/* Start the download */
 			URL url = new URL("http://www.google.fr");
-			HttpURLConnection.setFollowRedirects(true);
-			HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-			connection.setRequestMethod("GET");
-			new Thread(new Download(pipe.sink(), connection)).start();
+			new Thread(new Download(pipe.sink(), url, "GET", new HashMap<String, String>())).start();
 
 			/* On receiving data from the pipe, you can send directly to the client */
 			ByteBuffer bb = ByteBuffer.allocateDirect(BUFFER_SIZE);
