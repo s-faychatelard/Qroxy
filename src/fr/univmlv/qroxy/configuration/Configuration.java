@@ -1,12 +1,15 @@
 package fr.univmlv.qroxy.configuration;
 
+import java.io.File;
+
 public class Configuration {
 	
 	private final static Configuration instance = new Configuration();
 	private String path;
 	
 	private Configuration() {
-		//Read conf from file
+		File conf = new File(path+"cache.conf");
+		
 	}
 	
 	public void prepareConfigurationWithPath(String path) {

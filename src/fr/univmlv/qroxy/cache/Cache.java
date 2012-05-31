@@ -82,6 +82,7 @@ public class Cache {
 		contentType = contentType.split(";")[0];
 		url = url.replace("://", "_");
 		StringBuilder filename = new StringBuilder(contentType).append("/").append(url);
+		
 		File file =  new File(filename.toString());
 		if(file.exists())
 			return this.isUptodate(url, contentType);
