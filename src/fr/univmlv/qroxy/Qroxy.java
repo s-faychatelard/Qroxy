@@ -15,6 +15,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
 
+import fr.univmlv.qroxy.configuration.Configuration;
 import fr.univmlv.qroxy.download.Download;
 
 public class Qroxy {
@@ -193,6 +194,11 @@ public class Qroxy {
 	}
 
 	public static void main(String[] args) {
+		try {
+			Configuration.getInstance().prepareConfigurationWithPath("cache.conf");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		new Qroxy(8080).launch();
 	}
 }

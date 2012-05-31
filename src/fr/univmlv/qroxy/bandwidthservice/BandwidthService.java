@@ -53,7 +53,7 @@ public class BandwidthService {
 	 * @param contentType of the download
 	 */
 	public void addADownloadWithURLAndType(String url, String contentType) {
-		downloads.put(url, new DownloadBandwidth(contentType, 1, 2000));
+		downloads.put(url, new DownloadBandwidth(contentType, Configuration.getInstance().getConfForType(contentType).getDebitmin(), Configuration.getInstance().getConfForType(contentType).getDebitmax()));
 	}
 	
 	/**
@@ -112,13 +112,13 @@ public class BandwidthService {
 		int globalWeight=0;
 		for (DownloadBandwidth db : downloads.values()) {
 			if (db.currentBandwidth >= db.maxBandwidth) continue;
-			globalWeight += Configuration.getInstance().getConfForType(db.contentType);
+			globalWeight += Configuration.getInstance().getConfForType(db.contentType).getWeight();
 		}
 
 		/* Adjust bandwidth for specific download */
 		for (DownloadBandwidth db : downloads.values()) {
 			if (db.currentBandwidth >= db.maxBandwidth) continue;
-			db.currentBandwidth += diffBandwidth * Configuration.getInstance().getConfForType(db.contentType)/globalWeight;
+			db.currentBandwidth += diffBandwidth * Configuration.getInstance().getConfForType(db.contentType).getWeight()/globalWeight;
 		}
 
 		/* Save the theorical bandwidth for further use */
