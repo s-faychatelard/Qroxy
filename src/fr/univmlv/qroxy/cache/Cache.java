@@ -61,6 +61,7 @@ public class Cache {
 	}
 
 	public void getFromCache(String url, String contentType, Pipe.SinkChannel channel) throws IOException {
+		//TODO ADD SHA1 to filename
 		ByteBuffer buffer = ByteBuffer.allocate(262144);
 		contentType = contentType.split(";")[0];
 		url = url.replace("://", "_");
@@ -93,6 +94,9 @@ public class Cache {
 	}
 
 	public boolean freeSpace(long neededSpace) {
+		
+		
+		//TODO add maximum size of cache
 		/*long size = 0;
 		while(size < neededSpace){
 			String filename = tree.getSmallerWeightPath();

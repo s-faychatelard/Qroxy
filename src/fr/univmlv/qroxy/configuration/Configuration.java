@@ -15,15 +15,18 @@ public class Configuration {
 	private final String stopbalise = "[/TYPE]";
 	private final char comment = '#';
 	
+	
 	private Configuration() {
 	}
 	
 	public void prepareConfigurationWithPath(String path) throws IOException {
+		//TODO ADD Maximum size of cache
 		this.path = path;
 		String type = null;
 		int max = -1;
 		int min = -1;
 		int weight = 1;
+		long size = -1;
 		ConfigurationType conftype;
 		File conf = new File(path);
 		FileInputStream fin= new FileInputStream(conf);
@@ -44,13 +47,16 @@ public class Configuration {
 							System.err.println("Fichier de configuration non valide");
 							return;
 						}
-						conftype = new ConfigurationType(max, min, weight);
+						conftype = new ConfigurationType(max, min, weight, size);
 						confMap.put(type, conftype);
 						break;
 					}
 					String[] confLine = confString.split("=");
 					if(confLine[0].equalsIgnoreCase("type")){
 						type = confString.substring(confString.indexOf("=")+1, confString.length());
+					}
+					if(confLine[0].equalsIgnoreCase("size")){
+						size = Long.getLong(confLine[1]);
 					}
 					if(confLine[0].equalsIgnoreCase("max")){
 						max = Integer.valueOf(confLine[1]);
