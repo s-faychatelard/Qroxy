@@ -108,7 +108,7 @@ public class Download implements Runnable {
 			/* Check if you need to cache the file */
 			if (cacheControl.contains("private") == false) {
 				if (urlConnection.getContentLength() != -1) {
-					if (cache.freeSpace(urlConnection.getContentLength())) {
+					if (cache.freeSpace(urlConnection.getContentLength(), contentType)) {
 						/* Space clear for caching */
 						caching = true;
 					}
@@ -119,7 +119,7 @@ public class Download implements Runnable {
 				}
 				else {
 					/* We don't know the real size, downloading before caching */
-					if (cache.freeSpace(100000)) {
+					if (cache.freeSpace(100000, contentType)) {
 						/* Predetermine space clear for caching */
 						caching = true;
 					}

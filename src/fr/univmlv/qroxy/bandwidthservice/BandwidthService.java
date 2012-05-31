@@ -112,13 +112,13 @@ public class BandwidthService {
 		int globalWeight=0;
 		for (DownloadBandwidth db : downloads.values()) {
 			if (db.currentBandwidth >= db.maxBandwidth) continue;
-			globalWeight += Configuration.getInstance().getWeightForType(db.contentType);
+			globalWeight += Configuration.getInstance().getConfForType(db.contentType);
 		}
 
 		/* Adjust bandwidth for specific download */
 		for (DownloadBandwidth db : downloads.values()) {
 			if (db.currentBandwidth >= db.maxBandwidth) continue;
-			db.currentBandwidth += diffBandwidth * Configuration.getInstance().getWeightForType(db.contentType)/globalWeight;
+			db.currentBandwidth += diffBandwidth * Configuration.getInstance().getConfForType(db.contentType)/globalWeight;
 		}
 
 		/* Save the theorical bandwidth for further use */
