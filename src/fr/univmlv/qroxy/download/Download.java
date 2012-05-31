@@ -59,6 +59,7 @@ public class Download implements Runnable {
 				urlConnection.setRequestProperty(key, properties.get(key));
 			}
 			
+			System.out.println(urlConnection.getHeaderField(0));
 			StringBuilder sb = new StringBuilder(urlConnection.getHeaderField(0)).append("\r\n");
 			int nbFields = urlConnection.getHeaderFields().size();
 			for(int i=1; i<nbFields; i++) {
@@ -76,20 +77,16 @@ public class Download implements Runnable {
 				keepAlive = true;
 			
 			/* Get informations */
-			if (urlConnection.getResponseCode() != 200) {
-				sb = new StringBuilder("HTTP/1.1 ");
-				sb.append(urlConnection.getResponseCode()).append(" ");
-				sb.append(urlConnection.getResponseMessage()).append("\r\n");
-				ByteBuffer bb = ByteBuffer.wrap(sb.toString().getBytes());
-				channel.write(bb);
+			/*if (urlConnection.getResponseCode() != 200) {
+				channel.close();
 				return;
-			}
+			}*/
 
 			/* Format url informations and send it to the client */
-			String file = urlConnection.getURL().getFile();
-			if (file == "" || file.compareTo("/") == 0)
+			String file = "";
+			if (urlConnection.getURL().getFile() == "" || urlConnection.getURL().getFile().compareTo("/") == 0)
 				file = "/index.html";
-			String urlPath = urlConnection.getURL().getProtocol() + "://" + urlConnection.getURL().getHost() + file;
+			String urlPath = url.toString() + file;
 			String contentType = urlConnection.getContentType();
 
 			/* Prepare cache */
