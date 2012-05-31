@@ -21,12 +21,18 @@ public class Download implements Runnable {
 	private final URL url;
 	private final String requestType;
 	private final Map<String, String> properties;
+	private volatile boolean keepAlive;
 
 	public Download(Pipe.SinkChannel channel, URL url, String requestType, Map<String, String> properties) {
 		this.channel = channel;
 		this.url = url;
 		this.requestType = requestType;
 		this.properties = properties;
+		this.keepAlive = false;
+	}
+	
+	public boolean getKeepAlive() {
+		return this.keepAlive;
 	}
 
 	/**
@@ -45,20 +51,24 @@ public class Download implements Runnable {
 			urlConnection = (HttpURLConnection)url.openConnection();
 			urlConnection.setRequestMethod(requestType);
 			for (String key : properties.keySet()) {
-				if(key.compareTo("Accept-Encoding") == 0)
-					continue;
 				urlConnection.setRequestProperty(key, properties.get(key));
-				System.out.println(key + " " + properties.get(key));
 			}
 			
-			StringBuilder sb = new StringBuilder(urlConnection.getHeaderField(0));
+			StringBuilder sb = new StringBuilder(urlConnection.getHeaderField(0)).append("\r\n");
 			int nbFields = urlConnection.getHeaderFields().size();
 			for(int i=1; i<nbFields; i++) {
-				sb.append(urlConnection.getHeaderFieldKey(i)).append("=");
+				sb.append(urlConnection.getHeaderFieldKey(i)).append(": ");
 				sb.append(urlConnection.getHeaderField(i)).append("\r\n");
 			}
 			sb.append("\r\n");
+			//System.out.println(sb.toString());
 			channel.write(ByteBuffer.wrap(sb.toString().getBytes()));
+			
+			String keep = urlConnection.getHeaderField("Connection");
+			if (keep != null && keep.compareTo("close") == 0)
+				keepAlive = false;
+			else
+				keepAlive = true;
 			
 			/* Get informations */
 			// TODO treat response code
@@ -68,7 +78,6 @@ public class Download implements Runnable {
 				sb.append(urlConnection.getResponseMessage()).append("\r\n");
 				ByteBuffer bb = ByteBuffer.wrap(sb.toString().getBytes());
 				channel.write(bb);
-				System.out.println("HTTP error " + sb.toString());
 				return;
 			}
 

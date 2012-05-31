@@ -30,9 +30,11 @@ public class Qroxy {
 	private static class Client {
 		public ByteBuffer out = ByteBuffer.allocate(BUFFER_SIZE);
 		public SocketChannel channel;
+		public Download download;
 
-		public Client(SocketChannel channel) {
+		public Client(SocketChannel channel, Download download) {
 			this.channel = channel;
+			this.download = download;
 		}
 	}
 
@@ -64,7 +66,20 @@ public class Qroxy {
 			selector = Selector.open();
 			channel.register(selector, SelectionKey.OP_ACCEPT);
 			while (true) {
-				selector.select();
+				if (selector.select(5000) == 0) {
+					// TODO kill all current client no more things to do
+					for (SourceChannel key : map.keySet()) {
+						key.close();
+						Client client = mapClient.get(key);
+						System.out.println("Kill " + client.channel.getRemoteAddress());
+						if (client != null)
+							client.channel.close();
+						map.clear();
+						mapClient.clear();
+					}
+					System.out.println("Timeout");
+					continue;
+				}
 				Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 				while (it.hasNext()) {
 					SelectionKey selKey = (SelectionKey)it.next();
@@ -75,6 +90,7 @@ public class Qroxy {
 						ServerSocketChannel sChannel = (ServerSocketChannel)selKey.channel();
 						SocketChannel clientChannel = sChannel.accept();
 						clientChannel.configureBlocking(false);
+						System.out.println("Accept " + clientChannel.getRemoteAddress());
 						clientChannel.register(selector, SelectionKey.OP_READ);
 					}
 
@@ -87,20 +103,11 @@ public class Qroxy {
 							Scanner scanner = new Scanner(clientChannel);
 
 							if (scanner.hasNextLine()) {
+								//System.out.println("Read " + clientChannel.getRemoteAddress());
 								String line = scanner.nextLine();
-								System.out.println(line);
 								String[] request = line.split(" ");
 
-								/* Create a pipe to communicate with the thread */
-								Pipe pipe = Pipe.open();
-								pipe.source().configureBlocking(false);
-								pipe.source().register(selector, SelectionKey.OP_READ);
-
-								/* Save the clientChannel for a specific pipe */
-								Client client = new Client(clientChannel);
-								map.put(pipe.source(), client);
-								mapClient.put(clientChannel, client);
-
+								/* Get request attributes */
 								Map<String, String> properties = new HashMap<String, String>();
 								while(scanner.hasNextLine()) {
 									line = scanner.nextLine();
@@ -114,12 +121,22 @@ public class Qroxy {
 									String value = line.substring(index+1, line.length());
 									properties.put(key, value);
 								}
-
+								
 								/* URL of the request */
 								URL url = new URL(request[1]);
+								
+								/* Create a pipe to communicate with the thread */
+								Pipe pipe = Pipe.open();
+								pipe.source().configureBlocking(false);
+								pipe.source().register(selector, SelectionKey.OP_READ);
+
+								/* Save the clientChannel for a specific pipe */
+								Client client = new Client(clientChannel, new Download(pipe.sink(), url, request[0], properties));
+								map.put(pipe.source(), client);
+								mapClient.put(clientChannel, client);
 
 								/* Start the download */
-								new Thread(new Download(pipe.sink(), url, request[0], properties)).start();
+								new Thread(client.download).start();
 							}
 						}
 
@@ -145,7 +162,12 @@ public class Qroxy {
 								selKey.cancel();
 								mapClient.remove(map.get(pipeChannel));
 								map.remove(pipeChannel);
-								client.channel.close();
+								//TODO do not close if Connection: keep-alive
+								//System.out.println("End of pipe " + client.download.getKeepAlive());
+								if (!client.download.getKeepAlive()) {
+									//System.out.println("Close " + client.channel.getRemoteAddress());
+									client.channel.close();
+								}
 								continue;
 							}
 
