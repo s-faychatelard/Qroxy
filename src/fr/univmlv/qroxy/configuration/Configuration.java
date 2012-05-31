@@ -10,7 +10,6 @@ public class Configuration {
 	
 	private HashMap<String, ConfigurationType> confMap = new HashMap<String, ConfigurationType>();
 	private final static Configuration instance = new Configuration();
-	private String path;
 	private final String startbalise = "[TYPE]";
 	private final String stopbalise = "[/TYPE]";
 	private final char comment = '#';
@@ -19,9 +18,9 @@ public class Configuration {
 	private Configuration() {
 	}
 	
-	public void prepareConfigurationWithPath(String path) throws IOException {
+	public void prepareConfigurationWithPath(String pathToConf) throws IOException {
 		//TODO ADD Maximum size of cache
-		this.path = path;
+		String path = pathToConf;
 		String type = null;
 		int max = -1;
 		int min = -1;
@@ -44,7 +43,11 @@ public class Configuration {
 					confString = sc.nextLine();
 					if(confString.equals(stopbalise)){
 						if(type == null){
-							System.err.println("Fichier de configuration non valide");
+							System.err.println("Fichier de configuration non valide type manquant");
+							return;
+						}
+						if(size == -1){
+							System.err.println("Fichier de configuration non valide size manquant");
 							return;
 						}
 						conftype = new ConfigurationType(max, min, weight, size);
@@ -56,7 +59,7 @@ public class Configuration {
 						type = confString.substring(confString.indexOf("=")+1, confString.length());
 					}
 					if(confLine[0].equalsIgnoreCase("size")){
-						size = Long.getLong(confLine[1]);
+						size =	Long.valueOf(confLine[1]);
 					}
 					if(confLine[0].equalsIgnoreCase("max")){
 						max = Integer.valueOf(confLine[1]);
