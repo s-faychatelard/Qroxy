@@ -15,10 +15,12 @@ public class BandwidthService {
 		public String contentType;
 		public double currentBandwidth;
 		public double maxBandwidth;
+		public double minBandwidth;
 		public long startTime;
-		public DownloadBandwidth(String contentType, int maxBandwidth){
-			this.currentBandwidth = maxBandwidth;
+		public DownloadBandwidth(String contentType, int minBandwidth, int maxBandwidth){
+			this.currentBandwidth = minBandwidth;
 			this.maxBandwidth = maxBandwidth;
+			this.minBandwidth = minBandwidth;
 			this.startTime = new Date().getTime();
 			this.contentType = contentType;
 		}
@@ -27,7 +29,7 @@ public class BandwidthService {
 	/**
 	 * This attribute represent the theorical bandwidth
 	 */
-	private double theoricalBandwith=0;
+	private double theoricalBandwidth=0;
 	/**
 	 * Represent the instance of BandwidthService
 	 */
@@ -51,7 +53,7 @@ public class BandwidthService {
 	 * @param contentType of the download
 	 */
 	public void addADownloadWithURLAndType(String url, String contentType) {
-		downloads.put(url, new DownloadBandwidth(contentType, 2000));
+		downloads.put(url, new DownloadBandwidth(contentType, Configuration.getInstance().getConfForType(contentType).getDebitmin(), Configuration.getInstance().getConfForType(contentType).getDebitmax()));
 	}
 	
 	/**
@@ -92,30 +94,36 @@ public class BandwidthService {
 		long endTime = new Date().getTime();
 		long duration = endTime - downloads.get(url).startTime;
 		downloads.get(url).startTime = endTime;
-		double diffBandwidth = ((double)contentSize/(double)duration) - theoricalBandwith;
+		double diffBandwidth = ((double)contentSize/(double)duration) - theoricalBandwidth;
 
 		/* Do not recalculate if it is the first loop, all operations will be false */
-		if (theoricalBandwith == 0) {
-			theoricalBandwith = ((double)contentSize/(double)duration);
+		if (theoricalBandwidth == 0) {
+			theoricalBandwidth = ((double)contentSize/(double)duration);
 			return;
+		}
+		
+		for (DownloadBandwidth db : downloads.values()) {
+			if (db.minBandwidth != -1 && db.currentBandwidth < db.minBandwidth)
+				db.currentBandwidth = db.minBandwidth;
+			diffBandwidth = diffBandwidth - (db.minBandwidth - db.currentBandwidth);
 		}
 
 		/* Calculate global weight of current downloads */
 		int globalWeight=0;
 		for (DownloadBandwidth db : downloads.values()) {
 			if (db.currentBandwidth >= db.maxBandwidth) continue;
-			globalWeight += Configuration.getInstance().getWeightForType(db.contentType);
+			globalWeight += Configuration.getInstance().getConfForType(db.contentType).getWeight();
 		}
 
 		/* Adjust bandwidth for specific download */
 		for (DownloadBandwidth db : downloads.values()) {
 			if (db.currentBandwidth >= db.maxBandwidth) continue;
-			db.currentBandwidth += diffBandwidth * Configuration.getInstance().getWeightForType(db.contentType)/globalWeight;
+			db.currentBandwidth += diffBandwidth * Configuration.getInstance().getConfForType(db.contentType).getWeight()/globalWeight;
 		}
 
 		/* Save the theorical bandwidth for further use */
-		theoricalBandwith = ((double)contentSize/(double)duration);
-		//System.out.println("Theorical bandwith : " + theoricalBandwith + " ko/s");
+		theoricalBandwidth = ((double)contentSize/(double)duration);
+		//System.out.println("Theorical bandwith : " + theoricalBandwidth + " ko/s");
 		//System.out.println("Theorical diff of bandwith : " + diffBandwidth + " ko/s");
 	}
 
@@ -133,7 +141,13 @@ public class BandwidthService {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		System.out.println("Need wait " + bandwidthService.getTimeToWaitForURLAndType("http://www.google.fr", 2000) + "ms");
+		System.out.println("Need wait " + bandwidthService.getTimeToWaitForURLAndType("http://www.google.fr", 1000) + "ms");
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		System.out.println("Need wait " + bandwidthService.getTimeToWaitForURLAndType("http://www.google.fr", 1000) + "ms");
 		bandwidthService.deleteDownloadWithURLAndType("http://www.google.fr");
 	}
 }

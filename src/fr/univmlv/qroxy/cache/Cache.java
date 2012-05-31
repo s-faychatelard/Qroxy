@@ -59,7 +59,10 @@ public class Cache {
 		output.getChannel().write(buffer);
 		output.flush();
 		output.close();
-		long newSize = file.length()+sizeMap.get(contentType);
+		long size = 0;
+		if (sizeMap.containsKey(contentType))
+			size = sizeMap.get(contentType);
+		long newSize = file.length()+size;
 		sizeMap.put(contentType, newSize);
 		tree.addPath(arbo.toString()+url);
 	}
@@ -86,7 +89,6 @@ public class Cache {
 	}
 
 	public boolean isInCache(String url, String contentType) {
-		//TODO contentType can be null
 		contentType = contentType.split(";")[0];
 		url = url.replace("://", "_");
 		StringBuilder filename = new StringBuilder(contentType).append("/").append(url);
@@ -98,7 +100,9 @@ public class Cache {
 	}
 
 	public boolean freeSpace(long neededSpace, String contentType) {
-		long size = sizeMap.get(contentType);
+		long size = 0;
+		if (sizeMap.containsKey(contentType))
+			size = sizeMap.get(contentType);
 		if((Configuration.getInstance().getConfForType(contentType).getSize() - size) > neededSpace)
 			return true;
 		long deletedSize = 0;
