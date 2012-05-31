@@ -68,7 +68,6 @@ public class Cache {
 	}
 
 	public void getFromCache(String url, String contentType, Pipe.SinkChannel channel) throws IOException {
-		//TODO ADD SHA1 to filename
 		ByteBuffer buffer = ByteBuffer.allocate(262144);
 		contentType = contentType.split(";")[0];
 		url = url.replace("://", "_");
@@ -81,10 +80,10 @@ public class Cache {
 			e.printStackTrace();
 		}
 		contentType = contentType.split(";")[0];
-		filename = url.replace("://", "_");
+		url = url.replace("://", "_");
 		StringBuilder path = new StringBuilder(contentType).append("/");
 		String[] f = url.split("/");
-		url = f[f.length -1];
+		filename = f[f.length -1];
 		byte[] sha1 = new byte[40];
 		md.update(filename.getBytes(), 0, filename.length());
 		sha1 = md.digest();
@@ -169,9 +168,7 @@ public class Cache {
 		cache.addContentToCache(buffer, "http://www.facebook.com/index.html", "text/html", false);
 		cache.addContentToCache(buffer, "http://www.google.com/index.html", "text/html", true);
 		System.out.println(cache.isInCache("http://www.facebook.com/joach/index.html", "text/html"));
-		File test = new File("test");
-		System.out.println("la taille de mon repertoire"+test.length());
 		System.out.println(cache.isInCache("http://www.google.com/index.html", "text/html"));
-		System.out.println(cache.isInCache("http://www.google.com/", "text/html"));
+		System.out.println(cache.isInCache("http://www.google.com/toto.html", "text/html"));
 	}
 }
