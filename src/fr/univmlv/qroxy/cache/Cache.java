@@ -14,7 +14,6 @@ import java.util.HashMap;
 
 import fr.univmlv.qroxy.cache.tree.TreeCache;
 import fr.univmlv.qroxy.configuration.Configuration;
-import fr.univmlv.qroxy.configuration.ConfigurationType;
 
 public class Cache {
 	private final static Cache instance = new Cache();
