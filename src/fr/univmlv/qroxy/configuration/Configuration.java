@@ -83,6 +83,8 @@ public class Configuration {
 	
 	public ConfigurationType getConfForType(String contentType) {
 		ConfigurationType type = Configuration.getInstance().confMap.get(contentType);
+		if (type == null)
+			type = new ConfigurationType(-1, -1, 1, 50000000);
 		return type;
 	}
 
