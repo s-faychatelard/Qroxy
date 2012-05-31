@@ -4,20 +4,22 @@ package fr.univmlv.qroxy.cache;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 
 import fr.univmlv.qroxy.cache.tree.TreeCache;
+import fr.univmlv.qroxy.configuration.Configuration;
+import fr.univmlv.qroxy.configuration.ConfigurationType;
 
 public class Cache {
 	private final static Cache instance = new Cache();
 	private TreeCache tree = new TreeCache();
-
+	private HashMap<String, Long> sizeMap = new HashMap<String, Long>();
 	public static Cache getInstance() {
 		return instance;
 	}
@@ -58,10 +60,13 @@ public class Cache {
 		output.getChannel().write(buffer);
 		output.flush();
 		output.close();
+		long newSize = file.length()+sizeMap.get(contentType);
+		sizeMap.put(contentType, newSize);
 		tree.addPath(arbo.toString()+url);
 	}
 
 	public void getFromCache(String url, String contentType, Pipe.SinkChannel channel) throws IOException {
+		//TODO ADD SHA1 to filename
 		ByteBuffer buffer = ByteBuffer.allocate(262144);
 		contentType = contentType.split(";")[0];
 		url = url.replace("://", "_");
@@ -86,21 +91,27 @@ public class Cache {
 		contentType = contentType.split(";")[0];
 		url = url.replace("://", "_");
 		StringBuilder filename = new StringBuilder(contentType).append("/").append(url);
+		
 		File file =  new File(filename.toString());
-		if(file.exists())
+		if(file.exists() && !file.isDirectory())
 			return this.isUptodate(url, contentType);
 		return false;
 	}
 
-	public boolean freeSpace(long neededSpace) {
-		/*long size = 0;
-		while(size < neededSpace){
+	public boolean freeSpace(long neededSpace, String contentType) {
+		long size = sizeMap.get(contentType);
+		if((Configuration.getInstance().getConfForType(contentType).getSize() - size) > neededSpace)
+			return true;
+		long deletedSize = 0;
+		while(deletedSize < neededSpace){
 			String filename = tree.getSmallerWeightPath();
 			File fileToDelete = new File(filename);
-			size = size + fileToDelete.length();
+			deletedSize = deletedSize + fileToDelete.length();
 			if(fileToDelete.delete())
 				tree.removePath(filename);
-		}*/
+		}
+		long newSize = sizeMap.get(contentType) - deletedSize;
+		sizeMap.put(contentType, newSize);
 		return true;
 	}
 
@@ -112,7 +123,8 @@ public class Cache {
 		cache.addContentToCache(buffer, "http://www.facebook.com/index.html", "text/html", false);
 		cache.addContentToCache(buffer, "http://www.google.com/index.html", "text/html", true);
 		System.out.println(cache.isInCache("http://www.facebook.com/joach/index.html", "text/html"));
-		System.out.println(cache.freeSpace(100));
+		File test = new File("test");
+		System.out.println("la taille de mon repertoire"+test.length());
 		System.out.println(cache.isInCache("http://www.google.com/index.html", "text/html"));
 		System.out.println(cache.isInCache("http://www.google.com/", "text/html"));
 	}
