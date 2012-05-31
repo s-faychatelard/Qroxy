@@ -72,8 +72,31 @@ public class Cache {
 		ByteBuffer buffer = ByteBuffer.allocate(262144);
 		contentType = contentType.split(";")[0];
 		url = url.replace("://", "_");
-		StringBuilder filename = new StringBuilder(contentType).append("/").append(url);
-		File file =  new File(filename.toString());
+		String filename;
+		MessageDigest md = null;
+		try {
+			md = MessageDigest.getInstance("SHA-1");
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		contentType = contentType.split(";")[0];
+		filename = url.replace("://", "_");
+		StringBuilder path = new StringBuilder(contentType).append("/");
+		String[] f = url.split("/");
+		url = f[f.length -1];
+		byte[] sha1 = new byte[40];
+		md.update(filename.getBytes(), 0, filename.length());
+		sha1 = md.digest();
+		StringBuilder hexSha1 = new StringBuilder();
+		for (int i=0;i<sha1.length;i++) {
+			hexSha1.append(Integer.toHexString(0xFF & sha1[i]));
+		}
+		for (int i = 0; i < f.length-1; i++) {
+			path.append(f[i]).append("/");
+		}
+		path.append(hexSha1);
+		File file =  new File(path.toString());
 		FileInputStream input = new FileInputStream(file);
 		while(input.getChannel().read(buffer) != -1){
 			buffer.flip();
@@ -89,11 +112,31 @@ public class Cache {
 	}
 
 	public boolean isInCache(String url, String contentType) {
+		MessageDigest md = null;
+		String filename;
+		try {
+			md = MessageDigest.getInstance("SHA-1");
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		contentType = contentType.split(";")[0];
 		url = url.replace("://", "_");
-		StringBuilder filename = new StringBuilder(contentType).append("/").append(url);
-		
-		File file =  new File(filename.toString());
+		StringBuilder path = new StringBuilder(contentType).append("/");
+		String[] f = url.split("/");
+		filename = f[f.length -1];
+		byte[] sha1 = new byte[40];
+		md.update(filename.getBytes(), 0, filename.length());
+		sha1 = md.digest();
+		StringBuilder hexSha1 = new StringBuilder();
+		for (int i=0;i<sha1.length;i++) {
+			hexSha1.append(Integer.toHexString(0xFF & sha1[i]));
+		}
+		for (int i = 0; i < f.length-1; i++) {
+			path.append(f[i]).append("/");
+		}
+		path.append(hexSha1);
+		File file =  new File(path.toString());
 		if(file.exists() && !file.isDirectory())
 			return this.isUptodate(url, contentType);
 		return false;
