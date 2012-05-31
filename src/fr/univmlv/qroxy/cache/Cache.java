@@ -26,11 +26,6 @@ public class Cache {
 	// TODO name too long
 	// TODO not a directory
 	public void addContentToCache(ByteBuffer buffer, String url, String contentType, boolean append) throws IOException {
-		contentType = contentType.split(";")[0];
-		File contentTypeF = new File(contentType);
-		url = url.replace("://", "_");
-		String[] f = url.split("/");
-		url = f[f.length -1];
 		MessageDigest md = null;
 		try {
 			md = MessageDigest.getInstance("SHA-1");
@@ -38,22 +33,20 @@ public class Cache {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		if (contentType == null)
+			contentType = "misc";
+		else
+			contentType = contentType.split(";")[0];
+		File contentTypeF = new File(contentType);
+		contentTypeF.mkdirs();
 		byte[] sha1 = new byte[40];
 		md.update(url.getBytes(), 0, url.length());
 		sha1 = md.digest();
-		StringBuilder arbo = new StringBuilder();
-		contentTypeF.mkdirs();
-		arbo.append(contentType).append("/");
-		for (int i = 0; i < f.length-1 ; i++) {
-			arbo.append(f[i]).append("/");
-			File rep = new File(arbo.toString());
-			rep.mkdir();
-		}
 		StringBuilder hexSha1 = new StringBuilder();
 		for (int i=0;i<sha1.length;i++) {
 			hexSha1.append(Integer.toHexString(0xFF & sha1[i]));
 		}
-		File file = new File(arbo.toString(), hexSha1.toString());
+		File file = new File(contentType, hexSha1.toString());
 		FileOutputStream output = new FileOutputStream(file, append);
 		buffer.flip();
 		output.getChannel().write(buffer);
@@ -64,14 +57,13 @@ public class Cache {
 			size = sizeMap.get(contentType);
 		long newSize = file.length()+size;
 		sizeMap.put(contentType, newSize);
-		tree.addPath(arbo.toString()+url);
+		
+		url = url.replace("://", "_");
+		tree.addPath(url);
 	}
 
 	public void getFromCache(String url, String contentType, Pipe.SinkChannel channel) throws IOException {
 		ByteBuffer buffer = ByteBuffer.allocate(262144);
-		contentType = contentType.split(";")[0];
-		url = url.replace("://", "_");
-		String filename;
 		MessageDigest md = null;
 		try {
 			md = MessageDigest.getInstance("SHA-1");
@@ -79,23 +71,18 @@ public class Cache {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		contentType = contentType.split(";")[0];
-		url = url.replace("://", "_");
-		StringBuilder path = new StringBuilder(contentType).append("/");
-		String[] f = url.split("/");
-		filename = f[f.length -1];
+		if (contentType == null)
+			contentType = "misc";
+		else
+			contentType = contentType.split(";")[0];
 		byte[] sha1 = new byte[40];
-		md.update(filename.getBytes(), 0, filename.length());
+		md.update(url.getBytes(), 0, url.length());
 		sha1 = md.digest();
 		StringBuilder hexSha1 = new StringBuilder();
 		for (int i=0;i<sha1.length;i++) {
 			hexSha1.append(Integer.toHexString(0xFF & sha1[i]));
 		}
-		for (int i = 0; i < f.length-1; i++) {
-			path.append(f[i]).append("/");
-		}
-		path.append(hexSha1);
-		File file =  new File(path.toString());
+		File file =  new File(contentType, hexSha1.toString());
 		FileInputStream input = new FileInputStream(file);
 		while(input.getChannel().read(buffer) != -1){
 			buffer.flip();
@@ -104,6 +91,9 @@ public class Cache {
 		}
 		channel.close();
 		input.close();
+		
+		url = url.replace("://", "_");
+		tree.addPath(url);
 	}
 
 	public boolean isUptodate(String url, String contentType){
@@ -112,30 +102,24 @@ public class Cache {
 
 	public boolean isInCache(String url, String contentType) {
 		MessageDigest md = null;
-		String filename;
 		try {
 			md = MessageDigest.getInstance("SHA-1");
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		contentType = contentType.split(";")[0];
-		url = url.replace("://", "_");
-		StringBuilder path = new StringBuilder(contentType).append("/");
-		String[] f = url.split("/");
-		filename = f[f.length -1];
+		if (contentType == null)
+			contentType = "misc";
+		else
+			contentType = contentType.split(";")[0];
 		byte[] sha1 = new byte[40];
-		md.update(filename.getBytes(), 0, filename.length());
+		md.update(url.getBytes(), 0, url.length());
 		sha1 = md.digest();
 		StringBuilder hexSha1 = new StringBuilder();
 		for (int i=0;i<sha1.length;i++) {
 			hexSha1.append(Integer.toHexString(0xFF & sha1[i]));
 		}
-		for (int i = 0; i < f.length-1; i++) {
-			path.append(f[i]).append("/");
-		}
-		path.append(hexSha1);
-		File file =  new File(path.toString());
+		File file =  new File(contentType, hexSha1.toString());
 		if(file.exists() && !file.isDirectory())
 			return this.isUptodate(url, contentType);
 		return false;
@@ -143,6 +127,10 @@ public class Cache {
 
 	public boolean freeSpace(long neededSpace, String contentType) {
 		long size = 0;
+		if (contentType == null)
+			contentType = "misc";
+		else
+			contentType = contentType.split(";")[0];
 		if (sizeMap.containsKey(contentType))
 			size = sizeMap.get(contentType);
 		if((Configuration.getInstance().getConfForType(contentType).getSize() - size) > neededSpace)

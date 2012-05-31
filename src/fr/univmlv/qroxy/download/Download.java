@@ -50,26 +50,29 @@ public class Download implements Runnable {
 	@Override
 	public void run() {
 		try {
-			
 			/* Send the header response to the Client */
 			HttpURLConnection.setFollowRedirects(true);
 			urlConnection = (HttpURLConnection)url.openConnection();
 			urlConnection.setRequestMethod(requestType);
 			for (String key : properties.keySet()) {
+				if (key.equals("Proxy-Connection")) continue;
+				System.out.println(key + ": " + properties.get(key));
 				urlConnection.setRequestProperty(key, properties.get(key));
 			}
+			System.out.println("\r\n\r\n");
 			
-			System.out.println(urlConnection.getHeaderField(0));
+			/* Send HTTP response to the client */
+			//TODO manage chunked data
 			StringBuilder sb = new StringBuilder(urlConnection.getHeaderField(0)).append("\r\n");
 			int nbFields = urlConnection.getHeaderFields().size();
 			for(int i=1; i<nbFields; i++) {
+				System.out.println(urlConnection.getHeaderFieldKey(i) + " " + urlConnection.getHeaderField(i));
 				sb.append(urlConnection.getHeaderFieldKey(i)).append(": ");
 				sb.append(urlConnection.getHeaderField(i)).append("\r\n");
 			}
 			sb.append("\r\n");
-			//System.out.println(sb.toString());
 			channel.write(ByteBuffer.wrap(sb.toString().getBytes()));
-			
+		
 			String keep = urlConnection.getHeaderField("Connection");
 			if (keep != null && keep.compareTo("close") == 0)
 				keepAlive = false;
@@ -167,7 +170,6 @@ public class Download implements Runnable {
 
 			/* Remove the download from the BandwidthService */
 			bandwidthService.deleteDownloadWithURLAndType(urlPath);
-			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
