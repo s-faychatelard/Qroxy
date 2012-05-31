@@ -195,10 +195,10 @@ public class Qroxy {
 
 	public static void main(String[] args) {
 		try {
-			Configuration.getInstance().prepareConfigurationWithPath("/home/joachim/cache.conf");
+			Configuration.getInstance().prepareConfigurationWithPath("cache.conf");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		new Qroxy(3128).launch();
+		new Qroxy(8080).launch();
 	}
 }
