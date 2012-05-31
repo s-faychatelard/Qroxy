@@ -66,20 +66,7 @@ public class Qroxy {
 			selector = Selector.open();
 			channel.register(selector, SelectionKey.OP_ACCEPT);
 			while (true) {
-				if (selector.select(5000) == 0) {
-					// TODO kill all current client no more things to do
-					for (SourceChannel key : map.keySet()) {
-						key.close();
-						Client client = mapClient.get(key);
-						System.out.println("Kill " + client.channel.getRemoteAddress());
-						if (client != null)
-							client.channel.close();
-						map.clear();
-						mapClient.clear();
-					}
-					System.out.println("Timeout");
-					continue;
-				}
+				selector.select();
 				Iterator<SelectionKey> it = selector.selectedKeys().iterator();
 				while (it.hasNext()) {
 					SelectionKey selKey = (SelectionKey)it.next();
@@ -90,7 +77,6 @@ public class Qroxy {
 						ServerSocketChannel sChannel = (ServerSocketChannel)selKey.channel();
 						SocketChannel clientChannel = sChannel.accept();
 						clientChannel.configureBlocking(false);
-						System.out.println("Accept " + clientChannel.getRemoteAddress());
 						clientChannel.register(selector, SelectionKey.OP_READ);
 					}
 

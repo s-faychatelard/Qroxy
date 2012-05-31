@@ -22,6 +22,7 @@ public class Download implements Runnable {
 	private final String requestType;
 	private final Map<String, String> properties;
 	private volatile boolean keepAlive;
+	private volatile boolean stop=false;
 
 	public Download(Pipe.SinkChannel channel, URL url, String requestType, Map<String, String> properties) {
 		this.channel = channel;
@@ -29,6 +30,10 @@ public class Download implements Runnable {
 		this.requestType = requestType;
 		this.properties = properties;
 		this.keepAlive = false;
+	}
+	
+	public void interrupt() {
+		stop=true;
 	}
 	
 	public boolean getKeepAlive() {
@@ -71,7 +76,6 @@ public class Download implements Runnable {
 				keepAlive = true;
 			
 			/* Get informations */
-			// TODO treat response code
 			if (urlConnection.getResponseCode() != 200) {
 				sb = new StringBuilder("HTTP/1.1 ");
 				sb.append(urlConnection.getResponseCode()).append(" ");
@@ -105,7 +109,7 @@ public class Download implements Runnable {
 			if (cacheControl.contains("private") == false) {
 				if (urlConnection.getContentLength() != -1) {
 					if (cache.freeSpace(urlConnection.getContentLength())) {
-						//System.out.println("Space clear for caching");
+						/* Space clear for caching */
 						caching = true;
 					}
 					else {
@@ -114,20 +118,16 @@ public class Download implements Runnable {
 					}
 				}
 				else {
-					//System.out.println("We don't know the real size, downloading before caching");
-					// TODO Content-Length equal to -1 need to found a predetermine size to free
+					/* We don't know the real size, downloading before caching */
 					if (cache.freeSpace(100000)) {
-						//System.out.println("Predetermine space clear for caching");
+						/* Predetermine space clear for caching */
 						caching = true;
 					}
 					else {
+						// TODO we must inform the Logger that there are not enough space for this file
 						//System.out.println("No enough space for caching");
 					}
 				}
-			}
-			else {
-				// Do nothing
-				//System.out.println("Cache-control is private");
 			}
 
 			/* Get content from url and send it to the cache and client */
@@ -145,6 +145,9 @@ public class Download implements Runnable {
 			/* Download the content */
 			while((readbyte = dis.read(buffer, 0, BUFFER_SIZE)) != -1 && readbyte != 0) {
 				ByteBuffer bb = ByteBuffer.wrap(buffer, 0, readbyte);
+				
+				if (stop)
+					break;
 				
 				/* Send it to the client */
 				channel.write(bb);
