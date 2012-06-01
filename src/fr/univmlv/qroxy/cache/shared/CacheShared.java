@@ -32,20 +32,12 @@ public class CacheShared{
 		byte[] buffer = new byte[BUFFER_SIZE];
 		buffer[0] = byte1.byteValue();
 		buffer[1] = byte2.byteValue();
-		byte[] sha256 = new byte[32];
-		MessageDigest md = null;
-		try {
-			md = MessageDigest.getInstance("SHA-256");
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		md.update(filename.getBytes(), 0, filename.length());
-		sha256 = md.digest();
+		byte[] filenameByte = new byte[filename.length()];
+		
 		byte[] timeByte = time.toString().getBytes();
 		for (int i = 2; i < buffer.length; i++) {
 			if(i<34){
-				buffer[i] = sha256[i-2];
+				buffer[i] = filenameByte[i-4];
 			}else{
 				buffer[i] = timeByte[i-34];
 			}
@@ -60,8 +52,21 @@ public class CacheShared{
 	}
 	
 	public void multicastReceive(DatagramPacket dp){
+		String filename;
+		byte[] timeByte = new byte[4];
+		byte[] sha256 = new byte[32];
 		byte[] buffer = new byte[BUFFER_SIZE];
-		dp.getData();
+		buffer = dp.getData();
+		if(buffer[0] == byte1.byteValue() && buffer[1] == byte2.byteValue()){
+			for (int i = 2; i < buffer.length; i++) {
+				if(i<34){
+					sha256[i-2] = buffer[i];
+					
+				}else{
+					timeByte[i-34] = buffer[i];
+				}
+			}
+		}
 	}
 	
 	public static void main(String[] args) {

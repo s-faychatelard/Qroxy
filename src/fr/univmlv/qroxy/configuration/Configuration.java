@@ -8,15 +8,11 @@ import java.util.Scanner;
 
 public class Configuration {
 	
-	private HashMap<String, ConfigurationType> confMap = new HashMap<String, ConfigurationType>();
+	private final HashMap<String, ConfigurationType> confMap = new HashMap<String, ConfigurationType>();
 	private final static Configuration instance = new Configuration();
-	private final String startbalise = "[TYPE]";
-	private final String stopbalise = "[/TYPE]";
-	private final char comment = '#';
-	
-	
-	private Configuration() {
-	}
+	private final static String startbalise = "[TYPE]";
+	private final static String stopbalise = "[/TYPE]";
+	private final static char comment = '#';
 	
 	public void prepareConfigurationWithPath(String pathToConf) throws IOException {
 		//TODO ADD Maximum size of cache
