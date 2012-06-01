@@ -23,15 +23,12 @@ public class Cache {
 		return instance;
 	}
 
-	// TODO name too long
-	// TODO not a directory
 	public void addContentToCache(ByteBuffer buffer, String url, String contentType, boolean append) throws IOException {
 		MessageDigest md = null;
 		try {
 			md = MessageDigest.getInstance("SHA-1");
 		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Cannot generate SHA-1 for url " + url);
 		}
 		if (contentType == null)
 			contentType = "misc";
@@ -68,8 +65,7 @@ public class Cache {
 		try {
 			md = MessageDigest.getInstance("SHA-1");
 		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Cannot generate SHA-1 for url " + url);
 		}
 		if (contentType == null)
 			contentType = "misc";
@@ -105,8 +101,7 @@ public class Cache {
 		try {
 			md = MessageDigest.getInstance("SHA-1");
 		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Cannot generate SHA-1 for url " + url);
 		}
 		if (contentType == null)
 			contentType = "misc";
