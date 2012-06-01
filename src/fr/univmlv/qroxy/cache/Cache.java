@@ -17,12 +17,11 @@ import fr.univmlv.qroxy.configuration.Configuration;
 
 public class Cache {
 	private final static Cache instance = new Cache();
-	private TreeCache tree = new TreeCache();
+	private static TreeCache tree = new TreeCache();
 	private HashMap<String, Long> sizeMap = new HashMap<String, Long>();
 	public static Cache getInstance() {
 		return instance;
 	}
-
 	public void addContentToCache(ByteBuffer buffer, String url, String contentType, boolean append) throws IOException {
 		MessageDigest md = null;
 		try {
@@ -153,5 +152,6 @@ public class Cache {
 		System.out.println(cache.isInCache("http://www.facebook.com/joach/index.html", "text/html"));
 		System.out.println(cache.isInCache("http://www.google.com/index.html", "text/html"));
 		System.out.println(cache.isInCache("http://www.google.com/toto.html", "text/html"));
+		System.out.println(tree);
 	}
 }

@@ -16,6 +16,11 @@ public class TreeCache {
 	public String getSmallerWeightPath() {
 		return root.getSmallerWeightPath();
 	}
+	@Override
+	public String toString() {
+		// TODO Auto-generated method stub
+		return root.toString();
+	}
 	
 	public static void main(String[] args) {
 		TreeCache tree = new TreeCache();
