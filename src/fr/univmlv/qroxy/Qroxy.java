@@ -92,12 +92,12 @@ public class Qroxy {
 							if (scanner.hasNextLine()) {
 								String line = scanner.nextLine();
 								String[] request = line.split(" ");
-
+								
 								/* Get request attributes */
 								Map<String, String> properties = new HashMap<String, String>();
 								while(scanner.hasNextLine()) {
 									line = scanner.nextLine();
-									if (line.length() <= 2) {
+									if (line.length() == 0) {
 										break;
 									}
 									int index = line.indexOf(':');
@@ -107,6 +107,11 @@ public class Qroxy {
 									String value = line.substring(index+1, line.length());
 									properties.put(key, value);
 								}
+								/*if (scanner.hasNextLine()) {
+									line = scanner.nextLine();
+									properties.put("POSTCONTENT", line);
+									System.out.println(line);
+								}*/
 								System.out.println(request[1] + "\r\n");
 								/* URL of the request */
 								URL url = new URL(request[1]);

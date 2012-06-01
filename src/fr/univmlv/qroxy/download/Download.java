@@ -1,6 +1,7 @@
 package fr.univmlv.qroxy.download;
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -21,6 +22,7 @@ public class Download implements Runnable {
 	private final URL url;
 	private final String requestType;
 	private final Map<String, String> properties;
+	private boolean dataChunked=false;
 	private volatile boolean keepAlive;
 	private volatile boolean stop=false;
 
@@ -31,11 +33,11 @@ public class Download implements Runnable {
 		this.properties = properties;
 		this.keepAlive = false;
 	}
-	
+
 	public void interrupt() {
 		stop=true;
 	}
-	
+
 	public boolean getKeepAlive() {
 		return this.keepAlive;
 	}
@@ -54,31 +56,43 @@ public class Download implements Runnable {
 			HttpURLConnection.setFollowRedirects(true);
 			urlConnection = (HttpURLConnection)url.openConnection();
 			urlConnection.setRequestMethod(requestType);
+			urlConnection.setDoInput(true);
+			urlConnection.setUseCaches (false);
+			System.out.println(requestType + " " + url.toString() + " HTTP/1.1");
 			for (String key : properties.keySet()) {
-				if (key.equals("Proxy-Connection")) continue;
-				System.out.println(key + ": " + properties.get(key));
+				if (key.equalsIgnoreCase("POSTCONTENT")) continue;
 				urlConnection.setRequestProperty(key, properties.get(key));
 			}
-			System.out.println("\r\n\r\n");
-			
+
+			if (properties.get("POSTCONTENT") != null) {
+				//Send request
+				urlConnection.setDoOutput(true);
+				DataOutputStream wr = new DataOutputStream (urlConnection.getOutputStream());
+				wr.writeBytes(properties.get("POSTCONTENT") + "\r\n\r\n");
+				wr.flush();
+			}
+
 			/* Send HTTP response to the client */
 			//TODO manage chunked data
 			StringBuilder sb = new StringBuilder(urlConnection.getHeaderField(0)).append("\r\n");
 			int nbFields = urlConnection.getHeaderFields().size();
 			for(int i=1; i<nbFields; i++) {
-				System.out.println(urlConnection.getHeaderFieldKey(i) + " " + urlConnection.getHeaderField(i));
+				if (urlConnection.getHeaderField(i).equalsIgnoreCase("chunked"))
+					dataChunked=true;
 				sb.append(urlConnection.getHeaderFieldKey(i)).append(": ");
 				sb.append(urlConnection.getHeaderField(i)).append("\r\n");
 			}
 			sb.append("\r\n");
 			channel.write(ByteBuffer.wrap(sb.toString().getBytes()));
-		
+
+			System.out.println("Chunked : " + dataChunked);
+
 			String keep = urlConnection.getHeaderField("Connection");
 			if (keep != null && keep.compareTo("close") == 0)
 				keepAlive = false;
 			else
 				keepAlive = true;
-			
+
 			/* Get informations */
 			/*if (urlConnection.getResponseCode() != 200) {
 				channel.close();
@@ -96,11 +110,11 @@ public class Download implements Runnable {
 			Cache cache = Cache.getInstance();
 
 			/* Check if the content is not already in the cache */
-			if (cache.isInCache(urlPath, urlConnection.getContentType())) {
+			/*if (cache.isInCache(urlPath, urlConnection.getContentType())) {
 				// Get from cache
 				cache.getFromCache(urlPath, urlConnection.getContentType(), this.channel);
 				return;
-			}
+			}*/
 
 			/* Cache privacy information and ask to the cache to freeing space for the content */
 			boolean caching = false;
@@ -132,7 +146,7 @@ public class Download implements Runnable {
 
 			/* Get content from url and send it to the cache and client */
 			DataInputStream dis = new DataInputStream(urlConnection.getInputStream());
-			byte[] buffer = new byte[BUFFER_SIZE];
+
 			int readbyte = 0;
 
 			if (caching)
@@ -142,20 +156,25 @@ public class Download implements Runnable {
 			BandwidthService bandwidthService = BandwidthService.getInstance();
 			bandwidthService.addADownloadWithURLAndType(urlPath, urlConnection.getContentType());
 
+			//String hex = "2A"; //The answer is 42
+			//int intValue = Integer.parseInt(hex, 16);
+
+			byte[] buffer = new byte[BUFFER_SIZE];
+
 			/* Download the content */
 			while((readbyte = dis.read(buffer, 0, BUFFER_SIZE)) != -1 && readbyte != 0) {
 				ByteBuffer bb = ByteBuffer.wrap(buffer, 0, readbyte);
-				
+
 				if (stop)
 					break;
-				
+
 				/* Send it to the client */
 				channel.write(bb);
 
 				/* Send it to the cache */
 				if (caching)
 					cache.addContentToCache(bb, urlPath, urlConnection.getContentType(), true);
-				
+
 				bb.clear();
 
 				/* Wait define time to respect bandwidth define by the content type */
@@ -185,7 +204,7 @@ public class Download implements Runnable {
 			Pipe pipe = Pipe.open();
 
 			/* Start the download */
-			URL url = new URL("http://www.google.fr");
+			URL url = new URL("http://9gag.com/");
 			new Thread(new Download(pipe.sink(), url, "GET", new HashMap<String, String>())).start();
 
 			/* On receiving data from the pipe, you can send directly to the client */
@@ -195,9 +214,9 @@ public class Download implements Runnable {
 			while ((readbyte = pipe.source().read(bb)) != -1 || readbyte == 0) {
 				bb.flip();
 				bb.get(buffer, 0, readbyte);
-				/*for(int i=0; i<readbyte; i++) {
+				for(int i=0; i<readbyte; i++) {
 					System.out.print((char)buffer[i]);
-				}*/
+				}
 				bb.clear();
 			}
 			System.out.println("");
