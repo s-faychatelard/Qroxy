@@ -22,7 +22,6 @@ public class Download implements Runnable {
 	private final URL url;
 	private final String requestType;
 	private final Map<String, String> properties;
-	private boolean dataChunked=false;
 	private volatile boolean keepAlive;
 	private volatile boolean stop=false;
 
@@ -58,46 +57,40 @@ public class Download implements Runnable {
 			urlConnection.setRequestMethod(requestType);
 			urlConnection.setDoInput(true);
 			urlConnection.setUseCaches (false);
-			System.out.println(requestType + " " + url.toString() + " HTTP/1.1");
 			for (String key : properties.keySet()) {
 				if (key.equalsIgnoreCase("POSTCONTENT")) continue;
 				urlConnection.setRequestProperty(key, properties.get(key));
 			}
 
 			if (properties.get("POSTCONTENT") != null) {
-				//Send request
+				/* Send post data */
 				urlConnection.setDoOutput(true);
 				DataOutputStream wr = new DataOutputStream (urlConnection.getOutputStream());
 				wr.writeBytes(properties.get("POSTCONTENT") + "\r\n\r\n");
 				wr.flush();
 			}
+			
+			/* Get informations */
+			/*if (urlConnection.getResponseCode() != 200) {
+				channel.close();
+				return;
+			}*/
 
 			/* Send HTTP response to the client */
-			//TODO manage chunked data
 			StringBuilder sb = new StringBuilder(urlConnection.getHeaderField(0)).append("\r\n");
 			int nbFields = urlConnection.getHeaderFields().size();
 			for(int i=1; i<nbFields; i++) {
-				if (urlConnection.getHeaderField(i).equalsIgnoreCase("chunked"))
-					dataChunked=true;
 				sb.append(urlConnection.getHeaderFieldKey(i)).append(": ");
 				sb.append(urlConnection.getHeaderField(i)).append("\r\n");
 			}
 			sb.append("\r\n");
 			channel.write(ByteBuffer.wrap(sb.toString().getBytes()));
 
-			System.out.println("Chunked : " + dataChunked);
-
 			String keep = urlConnection.getHeaderField("Connection");
 			if (keep != null && keep.compareTo("close") == 0)
 				keepAlive = false;
 			else
 				keepAlive = true;
-
-			/* Get informations */
-			/*if (urlConnection.getResponseCode() != 200) {
-				channel.close();
-				return;
-			}*/
 
 			/* Format url informations and send it to the client */
 			String file = "";
@@ -110,11 +103,11 @@ public class Download implements Runnable {
 			Cache cache = Cache.getInstance();
 
 			/* Check if the content is not already in the cache */
-			/*if (cache.isInCache(urlPath, urlConnection.getContentType())) {
+			if (cache.isInCache(urlPath, urlConnection.getContentType())) {
 				// Get from cache
 				cache.getFromCache(urlPath, urlConnection.getContentType(), this.channel);
 				return;
-			}*/
+			}
 
 			/* Cache privacy information and ask to the cache to freeing space for the content */
 			boolean caching = false;
@@ -127,8 +120,7 @@ public class Download implements Runnable {
 						caching = true;
 					}
 					else {
-						// TODO we must inform the Logger that there are not enough space for this file
-						//System.out.println("No enough space for caching");
+						System.err.println("The file with url " + url + " with size " + urlConnection.getContentLength() + " cannort be cache.");
 					}
 				}
 				else {
@@ -138,8 +130,7 @@ public class Download implements Runnable {
 						caching = true;
 					}
 					else {
-						// TODO we must inform the Logger that there are not enough space for this file
-						//System.out.println("No enough space for caching");
+						System.err.println("The file with url " + url + " with size " + urlConnection.getContentLength() + " cannort be cache.");
 					}
 				}
 			}
@@ -155,9 +146,6 @@ public class Download implements Runnable {
 			/* Declare download to BandwidthService */
 			BandwidthService bandwidthService = BandwidthService.getInstance();
 			bandwidthService.addADownloadWithURLAndType(urlPath, urlConnection.getContentType());
-
-			//String hex = "2A"; //The answer is 42
-			//int intValue = Integer.parseInt(hex, 16);
 
 			byte[] buffer = new byte[BUFFER_SIZE];
 

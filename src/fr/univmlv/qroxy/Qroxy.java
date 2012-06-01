@@ -1,6 +1,8 @@
 package fr.univmlv.qroxy;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -86,7 +88,7 @@ public class Qroxy {
 
 						/* It's a client request */
 						if (!(selKey.channel() instanceof SourceChannel)) {
-							SocketChannel clientChannel = (SocketChannel)selKey.channel();
+							SocketChannel clientChannel = (SocketChannel)selKey.channel();							
 							Scanner scanner = new Scanner(clientChannel);
 
 							if (scanner.hasNextLine()) {
@@ -97,6 +99,7 @@ public class Qroxy {
 								Map<String, String> properties = new HashMap<String, String>();
 								while(scanner.hasNextLine()) {
 									line = scanner.nextLine();
+									System.out.println(line);
 									if (line.length() == 0) {
 										break;
 									}
@@ -107,13 +110,14 @@ public class Qroxy {
 									String value = line.substring(index+1, line.length());
 									properties.put(key, value);
 								}
-								/*if (scanner.hasNextLine()) {
-									line = scanner.nextLine();
-									properties.put("POSTCONTENT", line);
-									System.out.println(line);
+								// TODO get POST but there is no data...
+								/*if (properties.get("Content-Length") != null) {
+									ByteBuffer bb = ByteBuffer.allocate(Integer.valueOf(properties.get("Content-Length")));
+									System.out.println(clientChannel.read(bb));
+									bb.flip();
+									System.out.println(bb.limit() + " " + bb.capacity());
 								}*/
 								
-								System.out.println(request[1] + "\r\n");
 								/* URL of the request */
 								URL url = new URL(request[1]);
 								
@@ -155,7 +159,6 @@ public class Qroxy {
 								client.download.interrupt();
 								mapClient.remove(map.get(pipeChannel));
 								map.remove(pipeChannel);
-								//TODO do not close if Connection: keep-alive
 								if (!client.download.getKeepAlive()) {
 									client.channel.close();
 								}
@@ -178,7 +181,6 @@ public class Qroxy {
 							client.channel.close();
 							continue;
 						}
-						//TODO Broken pipe
 						try {
 							client.channel.write(client.out);
 						} catch (IOException e) {
@@ -201,10 +203,16 @@ public class Qroxy {
 
 	public static void main(String[] args) {
 		try {
-			Configuration.getInstance().prepareConfigurationWithPath("/home/joachim/cache.conf");
+			/* Redirect error to a file */
+			System.setErr(new PrintStream(new FileOutputStream("qroxy.log")));
+			System.err.println("Qroxy started");
+			/* Load configuration from file */
+			Configuration.getInstance().prepareConfigurationWithPath("cache.conf");
+			System.err.println("Cache loaded");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		/* Start qroxy */
 		new Qroxy(3128).launch();
 	}
 }
