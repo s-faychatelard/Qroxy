@@ -90,15 +90,14 @@ public class Qroxy {
 							Scanner scanner = new Scanner(clientChannel);
 
 							if (scanner.hasNextLine()) {
-								//System.out.println("Read " + clientChannel.getRemoteAddress());
 								String line = scanner.nextLine();
 								String[] request = line.split(" ");
-
+								
 								/* Get request attributes */
 								Map<String, String> properties = new HashMap<String, String>();
 								while(scanner.hasNextLine()) {
 									line = scanner.nextLine();
-									if (line.length() <= 2) {
+									if (line.length() == 0) {
 										break;
 									}
 									int index = line.indexOf(':');
@@ -108,7 +107,12 @@ public class Qroxy {
 									String value = line.substring(index+1, line.length());
 									properties.put(key, value);
 								}
-								
+								/*if (scanner.hasNextLine()) {
+									line = scanner.nextLine();
+									properties.put("POSTCONTENT", line);
+									System.out.println(line);
+								}*/
+								System.out.println(request[1] + "\r\n");
 								/* URL of the request */
 								URL url = new URL(request[1]);
 								
@@ -147,18 +151,17 @@ public class Qroxy {
 								if (pipeChannel.isOpen())
 									pipeChannel.close();
 								selKey.cancel();
+								client.download.interrupt();
 								mapClient.remove(map.get(pipeChannel));
 								map.remove(pipeChannel);
 								//TODO do not close if Connection: keep-alive
-								//System.out.println("End of pipe " + client.download.getKeepAlive());
 								if (!client.download.getKeepAlive()) {
-									//System.out.println("Close " + client.channel.getRemoteAddress());
 									client.channel.close();
 								}
 								continue;
 							}
 
-							/* Register has available for writing*/
+							/* Register is available for writing*/
 							if (client.channel.isConnected() && client.channel.isOpen())
 								client.channel.register(selector, SelectionKey.OP_WRITE);
 						}
@@ -170,6 +173,7 @@ public class Qroxy {
 						Client client = mapClient.get(selKey.channel());
 						client.out.flip();
 						if (!client.channel.isConnected() || !client.channel.isOpen()) {
+							client.download.interrupt();
 							client.channel.close();
 							continue;
 						}
@@ -179,6 +183,7 @@ public class Qroxy {
 						} catch (IOException e) {
 							client.channel.close();
 							selKey.cancel();
+							client.download.interrupt();
 							map.remove(mapClient.get(client.channel));
 							mapClient.remove(client.channel);
 							continue;
