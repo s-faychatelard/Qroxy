@@ -22,6 +22,7 @@ public class Cache {
 	public static Cache getInstance() {
 		return instance;
 	}
+	
 	public void addContentToCache(ByteBuffer buffer, String url, String contentType, boolean append) throws IOException {
 		MessageDigest md = null;
 		try {
