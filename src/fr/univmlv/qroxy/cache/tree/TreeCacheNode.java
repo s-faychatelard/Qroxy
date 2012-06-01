@@ -40,6 +40,12 @@ public class TreeCacheNode {
 		return sb.toString();
 	}
 	
+	@Override
+	public String toString() {
+		// TODO Auto-generated method stub
+		return child.toString()+"---";
+	}
+	
 	public int getWeight() {
 		return this.weight;
 	}
