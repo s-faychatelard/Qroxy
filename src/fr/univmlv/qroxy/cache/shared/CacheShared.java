@@ -127,11 +127,16 @@ public class CacheShared{
 			if(channel != null){
 				haveFileInCache(filename, Calendar.getInstance().getTimeInMillis());
 				try {
-					final ServerSocket server = new ServerSocket(6060);
-//					server.getChannel().configureBlocking(false);
-					Socket sChannel = server.accept();
-					
-					if (sChannel == null) return;
+					ServerSocket server = new ServerSocket(6060);
+					//server.getChannel().configureBlocking(false);
+					server.setSoTimeout(5000);
+					Socket sChannel = null;
+					try{
+						sChannel = server.accept();						
+					}catch (SocketTimeoutException e) {
+						channel.close();
+						return;
+					}
 					MessageDigest md = null;
 					try {
 						md = MessageDigest.getInstance("SHA-1");
@@ -248,8 +253,7 @@ public class CacheShared{
 	public static void main(String[] args) {
 		CacheShared cs = new CacheShared(4242);
 		CacheShared.startService();
-		if (cs.sendCacheRequest("text/html;http://www.google.com/index.html", Calendar.getInstance().getTimeInMillis()) == null)
-			cs.socket.close();
+		cs.sendCacheRequest("text/html;http://www.google.com/index.html", Calendar.getInstance().getTimeInMillis());
 	}
 
 }
