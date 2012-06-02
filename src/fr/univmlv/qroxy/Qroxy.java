@@ -17,11 +17,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
 
+import fr.univmlv.qroxy.cache.Cache;
 import fr.univmlv.qroxy.cache.shared.CacheShared;
 import fr.univmlv.qroxy.configuration.Configuration;
 import fr.univmlv.qroxy.download.Download;
 
-public class Qroxy {
+public class Qroxy implements Runnable {
 
 	private ServerSocketChannel channel;
 	private final static int BUFFER_SIZE = 262144;
@@ -57,11 +58,12 @@ public class Qroxy {
 			e.printStackTrace();
 		}
 	}
-
+	
 	/**
 	 * Manage communication with clients
 	 */
-	public void launch() {
+	@Override
+	public void run() {
 		try {
 			/* We create correspondence between a pipe and a socket client in both way */
 			HashMap<SourceChannel, Client> map = new HashMap<SourceChannel, Client>();
@@ -121,6 +123,9 @@ public class Qroxy {
 								
 								/* URL of the request */
 								URL url = new URL(request[1]);
+								if (url.toString().contains("http://qroxy")) {
+									this.sendCacheInformation(url.toString(), clientChannel);
+								}
 								
 								/* Create a pipe to communicate with the thread */
 								Pipe pipe = Pipe.open();
@@ -201,6 +206,37 @@ public class Qroxy {
 			e.printStackTrace();
 		}
 	}
+	
+	public void sendCacheInformation(String url, SocketChannel client) {
+		Cache cache = Cache.getInstance();
+		/* Remove just a content type cache */
+		if (url.contains("/remove/")) {
+			int index = url.indexOf("/remove/") + "/remove/".length();
+			String contentType = url.substring(index);
+			cache.emptyCacheForContentType(contentType);
+		}
+		/* Remove all cache */
+		if (url.contains("/empty/")) {
+			cache.emptyCache();
+		}
+		StringBuilder sb = new StringBuilder("<html><head></head><body><div><h1>Cache information</h1><h2>Taille des caches en cours</h2><table><thead><tr><th>Cache type</th><th>Taille courante (octets)</th><th>Taille globale (octets)</th><th>Vider le cache</th></tr></thead><tbody>");
+		for(String key : cache.getContentTypesInCache()) {
+			sb.append("<tr><td>").append(key).append("</td><td>").append(cache.getSizeCacheOfContentType(key)).append("</td><td>").append(Configuration.getInstance().getConfForType(key).getSize()).append("</td><td><a href='http://qroxy/remove/").append(key).append("'>Vider le cache</a></td></tr>");
+		}
+		sb.append("</tbody></table><div><div><p><a href='http://qroxy/empty/'>Vider le cache</a></p></div></div></div></body></html>");
+		ByteBuffer bb = ByteBuffer.allocate(1024+sb.length());
+		
+		bb.put("HTTP/1.1 200 OK\r\n".getBytes());
+		bb.put("Content-Type: text/html; charset=UTF-8\r\n".getBytes());
+		bb.put(("Content-Length: "+sb.length()+"\r\n\r\n").getBytes());
+		bb.put(sb.toString().getBytes());
+		bb.flip();
+		try {
+			client.write(bb);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
 	public static void main(String[] args) {
 		if (args.length != 3) {
@@ -243,7 +279,16 @@ public class Qroxy {
 			e.printStackTrace();
 		}
 		/* Start qroxy */
+		System.out.println("To see informations about your cache use http://qroxy in your browser");
+		System.out.println("Type 'exit' to quit");
 		CacheShared.startService();
-		new Qroxy(ip, port).launch();
+		new Thread(new Qroxy(ip, port)).start();
+		Scanner scanner = new Scanner(System.in);
+		while (scanner.hasNext()) {
+			if (scanner.next().equalsIgnoreCase("exit")) {
+				Cache.getInstance().emptyCache();
+				System.exit(0);
+			}
+		}
 	}
 }

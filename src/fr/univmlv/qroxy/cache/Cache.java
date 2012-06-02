@@ -9,10 +9,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Set;
 
 import fr.univmlv.qroxy.cache.shared.CacheShared;
 import fr.univmlv.qroxy.cache.tree.TreeCache;
@@ -22,11 +25,40 @@ public class Cache {
 	private final static Cache instance = new Cache();
 	private static TreeCache tree = new TreeCache();
 	private HashMap<String, Long> sizeMap = new HashMap<String, Long>();
-	
+	private HashMap<String, Integer> contentTypes = new HashMap<String, Integer>();
+
 	public static Cache getInstance() {
 		return instance;
 	}
+
+	public Set<String> getContentTypesInCache() {
+		return contentTypes.keySet();
+	}
+
+	public Long getSizeCacheOfContentType(String contentType) {
+		return sizeMap.get(contentType);
+	}
 	
+	public void emptyCache() {
+		for (String key : contentTypes.keySet()) {
+			this.emptyCacheForContentType(key);
+		}
+	}
+
+	public void emptyCacheForContentType(String contentType) {
+		File directory = new File(contentType);
+		String[] files = directory.list();
+		if(files != null){
+			for(int i = 0; i < files.length; i++){
+				String fileName = files[i];
+				try {
+					Files.deleteIfExists(Paths.get(contentType+"/"+fileName));
+				} catch (IOException e) {}
+			}
+		}
+		sizeMap.put(contentType, (long)0);
+	}
+
 	public void addContentToCache(ByteBuffer buffer, String url, String contentType, boolean append) throws IOException {
 		MessageDigest md = null;
 		try {
@@ -38,6 +70,7 @@ public class Cache {
 			contentType = "misc";
 		else
 			contentType = contentType.split(";")[0];
+		contentTypes.put(contentType, 1);
 		File contentTypeF = new File(contentType);
 		contentTypeF.mkdirs();
 		byte[] sha1 = new byte[40];
@@ -58,7 +91,7 @@ public class Cache {
 			size = sizeMap.get(contentType);
 		long newSize = file.length()+size;
 		sizeMap.put(contentType, newSize);
-		
+
 		url = url.replace("://", "_");
 		tree.addPath(url);
 	}
@@ -85,9 +118,6 @@ public class Cache {
 		for (int i=0;i<sha1.length;i++) {
 			hexSha1.append(Integer.toHexString(0xFF & sha1[i]));
 		}
-		System.out.println(url.length());
-		System.out.println(hexSha1.toString());
-		System.out.println(contentType);
 		File file =  new File(contentType, hexSha1.toString());
 		//TODO IsUpToDate
 		if(file.exists() && !file.isDirectory()){

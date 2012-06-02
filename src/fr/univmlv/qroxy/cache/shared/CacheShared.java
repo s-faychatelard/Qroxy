@@ -24,7 +24,7 @@ public class CacheShared{
 	private MulticastSocket socket;
 	private final static Integer byte1 = 0x53;
 	private final static Integer byte2 = 0x4A;
-	private final static Integer TIMEOUT = 2000;
+	private final static Integer TIMEOUT = 50;
 	private InetAddress multicastGroup = null;
 	private int port;
 	private volatile static InetAddress response=null;
@@ -71,14 +71,13 @@ public class CacheShared{
 		} catch (IOException e) {
 			System.err.println("Cannot send data to the multicast socket");
 		}
-		System.out.println("sendCacheRequest(String filename, long time)");
 		return this.waitResponse(filename);
 	}
 	
 	public SocketChannel waitResponse(String filename) {
 		int counter=TIMEOUT;
 		while(response == null) {
-			if (counter==0) { System.out.println("response timeout"); return null; }
+			if (counter==0) { return null; }
 			try {
 				Thread.sleep(1);
 			} catch (InterruptedException e1) { return null; }
@@ -92,16 +91,14 @@ public class CacheShared{
 				Thread.sleep(1);
 			} catch (InterruptedException e1) { return null; }
 			counter--;
-			if (counter==0) { System.out.println("responseFilename timeout"); return null; }
+			if (counter==0) { return null; }
 		}
-		System.out.println("waitResponse(String filename)");
 		SocketChannel s=null;
 		try {
 			s = SocketChannel.open();
 			s.connect(new InetSocketAddress(response.getHostAddress(), 6060));
 			response=null;
 			responseFilename=null;
-			System.out.println("Get from shared cache");
 		} catch (IOException e) { return null; }
 		return s;
 	}
@@ -122,9 +119,7 @@ public class CacheShared{
 			String filename = decode(buffer);
 			String contentType = filename.split(";")[0];
 			filename = filename.split(";")[1];
-			System.out.println(filename+" - "+contentType);
 			ReadableByteChannel channel = Cache.getInstance().isInCache(filename, contentType, false);
-			System.out.println(channel);
 			if(channel != null){
 				haveFileInCache(contentType+";"+filename, Calendar.getInstance().getTimeInMillis());
 				try {
@@ -133,7 +128,6 @@ public class CacheShared{
 					//server.getChannel().configureBlocking(false);
 					server.configureBlocking(false);
 					SocketChannel sChannel = null;
-					System.out.println("wait client");
 					int count=TIMEOUT;
 					while(count>-1) {
 						sChannel = server.accept();
@@ -147,7 +141,6 @@ public class CacheShared{
 					}
 					
 					if (sChannel == null) {
-						System.out.println("no client  bye");
 						channel.close();
 						return;
 					}
@@ -187,7 +180,6 @@ public class CacheShared{
 		}
 		if(buffer[0] == byte2.byteValue() && buffer[1] == byte1.byteValue()){
 			response = dp.getAddress();
-			System.out.println(response.getHostAddress());
 			responseFilename = decode(buffer);
 		}
 	}
