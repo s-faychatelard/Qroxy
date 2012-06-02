@@ -9,6 +9,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
@@ -34,7 +35,7 @@ public class CacheShared{
 	public CacheShared(int port) {
 		this.port = port;
 		try {
-			multicastGroup = InetAddress.getByName("192.168.2.5");
+			multicastGroup = InetAddress.getByName("192.168.2.6");
 			socket = new MulticastSocket(port);
 		} catch (IOException e) {
 			System.err.println("Cannot open multicast socket");
@@ -111,21 +112,21 @@ public class CacheShared{
 			return;
 		} catch (IOException e) {
 			System.err.println("Cannot receive data from the multicast socket");
-			return;
 		}
-		System.out.println("Receive data");
 		buffer = dp.getData();
 		if(buffer[0] == byte1.byteValue() && buffer[1] == byte2.byteValue()){
 			String filename = decode(buffer);
 			String contentType = filename.split(";")[0];
 			filename = filename.split(";")[1];
+			System.out.println(filename+" - "+contentType);
 			ReadableByteChannel channel = Cache.getInstance().isInCache(filename, contentType, false);
+			System.out.println(channel);
 			if(channel != null){
 				haveFileInCache(filename, Calendar.getInstance().getTimeInMillis());
 				try {
 					ServerSocket server = new ServerSocket(6060);
-					server.getChannel().configureBlocking(false);
-					SocketChannel sChannel = server.getChannel().accept();
+//					server.getChannel().configureBlocking(false);
+					Socket sChannel = server.accept();
 					
 					if (sChannel == null) return;
 					MessageDigest md = null;
@@ -151,7 +152,7 @@ public class CacheShared{
 					ByteBuffer bb = ByteBuffer.allocate(BUFFER_SIZE);
 					while(input.getChannel().read(bb) != -1) {
 						bb.flip();
-						sChannel.write(bb);	
+						sChannel.getChannel().write(bb);	
 						bb.compact();
 					}
 					sChannel.close();
@@ -244,7 +245,7 @@ public class CacheShared{
 	public static void main(String[] args) {
 		CacheShared cs = new CacheShared(4242);
 		CacheShared.startService();
-		cs.sendCacheRequest("text/html;http://www.google.com/index.html", Calendar.getInstance().getTimeInMillis());
+		cs.sendCacheRequest("html/text;http://www.google.fr/index.html", Calendar.getInstance().getTimeInMillis());
 	}
 
 }
