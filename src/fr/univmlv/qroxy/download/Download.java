@@ -15,6 +15,7 @@ import java.util.Map;
 
 import fr.univmlv.qroxy.bandwidthservice.BandwidthService;
 import fr.univmlv.qroxy.cache.Cache;
+import fr.univmlv.qroxy.configuration.Configuration;
 
 public class Download implements Runnable {
 
@@ -105,15 +106,15 @@ public class Download implements Runnable {
 			Cache cache = Cache.getInstance();
 
 			/* Check if the content is not already in the cache */
-			//TODO add Configuration.getInstance().isShared();
-			ReadableByteChannel cacheChannel = cache.isInCache(urlPath, urlConnection.getContentType(), true);
+			ReadableByteChannel cacheChannel = cache.isInCache(urlPath, urlConnection.getContentType(), Configuration.getInstance().isShared());
 			if (cacheChannel != null) {
-				// Get from cache
+				/* Get from cache */
 				ByteBuffer bb = ByteBuffer.allocate(BUFFER_SIZE);
 				while(cacheChannel.read(bb) != -1) {
 					bb.flip();
 					channel.write(bb);
 					
+					//TODO clear space in cache
 					if (cacheChannel instanceof SocketChannel) {
 						cache.addContentToCache(bb, urlPath, urlConnection.getContentType(), true);
 					}
