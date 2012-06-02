@@ -4,14 +4,17 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Timestamp;
+import java.util.Calendar;
+
+import fr.univmlv.qroxy.cache.Cache;
 
 public class CacheShared{
 
 	private MulticastSocket socket;
-	private final static int BUFFER_SIZE = 96;
 	private final static Integer byte1 = 0x53;
 	private final static Integer byte2 = 0x4A;
 	private InetAddress multicastGroup = null;
@@ -28,21 +31,37 @@ public class CacheShared{
 		}
 	}
 	
-	public void sendCacheRequest(String filename, Timestamp time){
-		byte[] buffer = new byte[BUFFER_SIZE];
+	public void sendCacheRequest(String filename, long time){
+		byte[] buffer = new byte[12+filename.length()];
+		Short size = (short) filename.length();
 		buffer[0] = byte1.byteValue();
 		buffer[1] = byte2.byteValue();
+		ByteBuffer bb = ByteBuffer.allocate(2);
+		bb.putShort(size);
+		bb.flip();
+		buffer[2] = bb.get();
+		buffer[3] = bb.get();
 		byte[] filenameByte = new byte[filename.length()];
-		
-		byte[] timeByte = time.toString().getBytes();
-		for (int i = 2; i < buffer.length; i++) {
-			if(i<34){
-				buffer[i] = filenameByte[i-4];
-			}else{
-				buffer[i] = timeByte[i-34];
+		filenameByte = filename.getBytes();
+		byte[] timeBytes = new byte[8];
+		bb = ByteBuffer.allocate(8);
+		bb.putLong(time);
+		bb.flip();
+		bb.get(timeBytes);
+		for (int i = 0, j = 0; i < filenameByte.length; i++) {
+			filenameByte[i] = (byte)(filenameByte[i]^timeBytes[j]);
+			j++;
+			if(j == 8){
+				j= 0;
 			}
 		}
-		DatagramPacket p = new DatagramPacket(buffer, BUFFER_SIZE, this.multicastGroup, this.port);
+		for (int i = 0; i < filenameByte.length; i++) {
+			buffer[i+4] = filenameByte[i];
+		}
+		for (int i = 0; i < 8; i++) {
+			buffer[i+4+filenameByte.length] = timeBytes[i];
+		}
+		DatagramPacket p = new DatagramPacket(buffer, 12+filename.length(), this.multicastGroup, this.port);
 		try {
 			this.socket.send(p);
 		} catch (IOException e) {
@@ -52,24 +71,38 @@ public class CacheShared{
 	}
 	
 	public void multicastReceive(DatagramPacket dp){
-		String filename;
-		byte[] timeByte = new byte[4];
-		byte[] sha256 = new byte[32];
-		byte[] buffer = new byte[BUFFER_SIZE];
+		byte[] buffer = new byte[dp.getLength()];
 		buffer = dp.getData();
+		short size;
+		byte[] timeBytes = new byte[8];
 		if(buffer[0] == byte1.byteValue() && buffer[1] == byte2.byteValue()){
-			for (int i = 2; i < buffer.length; i++) {
-				if(i<34){
-					sha256[i-2] = buffer[i];
-					
-				}else{
-					timeByte[i-34] = buffer[i];
+			ByteBuffer bb = ByteBuffer.allocate(2);
+			bb.put(buffer, 2, 2);
+			bb.flip();
+			size = bb.getShort();
+			byte[] filenameByte = new byte[size];
+			for(int i = 0; i<size; i++){
+				filenameByte[i] = buffer[i+4];
+			}
+			for (int i = 0; i < 8; i++) {
+				 timeBytes[i] = buffer[i+4+filenameByte.length];
+			}
+			for(int i = 0, j = 0; i<size; i++){
+				if(j == 7){
+					j = 0;
 				}
+				filenameByte[i] = (byte) (filenameByte[i]^timeBytes[j]);
+			}
+			String filename = new String(filenameByte);
+			if(Cache.getInstance().isInCache(filename, contentType)){
+				
 			}
 		}
 	}
 	
 	public static void main(String[] args) {
+		CacheShared cs = new CacheShared(1234);
+		cs.sendCacheRequest("http://www.google.fr/index.html", Calendar.getInstance().getTimeInMillis());
 		
 	}
 
