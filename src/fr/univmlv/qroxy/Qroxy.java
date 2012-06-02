@@ -25,6 +25,7 @@ public class Qroxy {
 
 	private ServerSocketChannel channel;
 	private final static int BUFFER_SIZE = 262144;
+	private final static String usage = "Usage : \r\n\tqroxy.jar -c cache.conf IP:PORT\r\n";
 
 	//TODO add limit of number of download thread
 
@@ -47,11 +48,11 @@ public class Qroxy {
 	 * 
 	 * @param remotePort the listening port of the Qroxy
 	 */
-	public Qroxy(int remotePort)  {
+	public Qroxy(String ip, int remotePort)  {
 		try {
 			channel = ServerSocketChannel.open();
 			channel.configureBlocking(false);
-			channel.bind(new InetSocketAddress(remotePort));
+			channel.bind(new InetSocketAddress(ip, remotePort));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -202,18 +203,47 @@ public class Qroxy {
 	}
 
 	public static void main(String[] args) {
+		if (args.length != 3) {
+			System.out.println(usage);
+			return;
+		}
+		String pathToConf=null;
+		String ip=null;
+		int port=-1;
+		if (args[0].equals("-c")) {
+			pathToConf = args[1];
+			if (!args[2].contains(":")) {
+				System.out.println(usage);
+				return;
+			}
+			ip = args[2].split(":")[0];
+			port = Integer.valueOf(args[2].split(":")[1]);
+		}
+		else {
+			if (!args[0].contains(":")) {
+				System.out.println(usage);
+				return;
+			}
+			ip = args[0].split(":")[0];
+			port = Integer.valueOf(args[2].split(":")[1]);
+			if (!args[1].equals("-c")) {
+				System.out.println(usage);
+				return;
+			}
+			pathToConf = args[2];
+		}
 		try {
 			/* Redirect error to a file */
 			System.setErr(new PrintStream(new FileOutputStream("qroxy.log")));
 			System.err.println("Qroxy started");
 			/* Load configuration from file */
-			Configuration.getInstance().prepareConfigurationWithPath("cache.conf");
-			System.err.println("Cache loaded");
+			Configuration.getInstance().prepareConfigurationWithPath(pathToConf);
+			System.err.println("Cache configuration loaded");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		/* Start qroxy */
 		CacheShared.startService();
-		new Qroxy(3128).launch();
+		new Qroxy(ip, port).launch();
 	}
 }

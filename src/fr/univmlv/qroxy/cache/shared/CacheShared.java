@@ -261,10 +261,6 @@ public class CacheShared{
 		return filename;
 	}
 	
-	public void fileRequest(){
-		
-	}
-	
 	public static void main(String[] args) {
 		CacheShared cs = CacheShared.getInstance();
 		CacheShared.startService();
