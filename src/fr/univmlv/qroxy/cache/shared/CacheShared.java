@@ -136,7 +136,18 @@ public class CacheShared{
 					server.configureBlocking(false);
 					SocketChannel sChannel = null;
 					System.out.println("wait client");
-					sChannel = server.accept();						
+					int count=TIMEOUT;
+					while(count>-1) {
+						sChannel = server.accept();
+						if (sChannel != null) break;
+						count--;
+						try {
+							Thread.sleep(1);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+					
 					if (sChannel == null) {
 						System.out.println("no client  bye");
 						channel.close();
