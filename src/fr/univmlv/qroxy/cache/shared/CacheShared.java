@@ -122,7 +122,7 @@ public class CacheShared{
 			ReadableByteChannel channel = Cache.getInstance().isInCache(filename, contentType, false);
 			System.out.println(channel);
 			if(channel != null){
-				haveFileInCache(filename, Calendar.getInstance().getTimeInMillis());
+				haveFileInCache(contentType+";"+filename, Calendar.getInstance().getTimeInMillis());
 				try {
 					ServerSocket server = new ServerSocket(6060);
 					//server.getChannel().configureBlocking(false);
