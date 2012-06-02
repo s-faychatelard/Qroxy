@@ -8,16 +8,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
-import java.nio.channels.Channels;
-import java.nio.channels.Pipe;
 import java.nio.channels.ReadableByteChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
 import java.util.HashMap;
-
-import sun.util.resources.CalendarData;
 
 import fr.univmlv.qroxy.cache.shared.CacheShared;
 import fr.univmlv.qroxy.cache.tree.TreeCache;
