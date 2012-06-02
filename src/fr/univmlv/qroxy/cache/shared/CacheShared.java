@@ -34,7 +34,7 @@ public class CacheShared{
 	public CacheShared(int port) {
 		this.port = port;
 		try {
-			multicastGroup = InetAddress.getByName("239.254.42.42");
+			multicastGroup = InetAddress.getByName("192.168.2.5");
 			socket = new MulticastSocket(port);
 		} catch (IOException e) {
 			System.err.println("Cannot open multicast socket");
@@ -111,7 +111,9 @@ public class CacheShared{
 			return;
 		} catch (IOException e) {
 			System.err.println("Cannot receive data from the multicast socket");
+			return;
 		}
+		System.out.println("Receive data");
 		buffer = dp.getData();
 		if(buffer[0] == byte1.byteValue() && buffer[1] == byte2.byteValue()){
 			String filename = decode(buffer);
@@ -240,9 +242,9 @@ public class CacheShared{
 	}
 	
 	public static void main(String[] args) {
-		CacheShared cs = new CacheShared(1234);
+		CacheShared cs = new CacheShared(4242);
 		CacheShared.startService();
-		cs.sendCacheRequest("html/text;http://www.google.fr/index.html", Calendar.getInstance().getTimeInMillis());
+		cs.sendCacheRequest("text/html;http://www.google.com/index.html", Calendar.getInstance().getTimeInMillis());
 	}
 
 }
