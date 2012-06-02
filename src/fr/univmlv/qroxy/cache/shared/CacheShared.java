@@ -33,11 +33,10 @@ public class CacheShared{
 	public CacheShared(int port) {
 		this.port = port;
 		try {
-			multicastGroup = InetAddress.getByName("242.42.42.42");
+			multicastGroup = InetAddress.getByName("239.254.42.42");
 			socket = new MulticastSocket(port);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Cannot open multicast socket");
 		}
 	}
 	
@@ -64,8 +63,7 @@ public class CacheShared{
 		try {
 			this.socket.send(p);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Cannot send data to the multicast socket");
 		}
 		return this.waitResponse(filename);
 	}
@@ -106,8 +104,7 @@ public class CacheShared{
 			this.socket.setSoTimeout(TIMEOUT);
 			this.socket.receive(dp);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Cannot receive data from the multicast socket");
 		}
 		buffer = dp.getData();
 		if(buffer[0] == byte1.byteValue() && buffer[1] == byte2.byteValue()){
@@ -171,8 +168,7 @@ public class CacheShared{
 		try {
 			this.socket.send(p);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("Cannot send data to the multicast socket");
 		}
 	}
 	

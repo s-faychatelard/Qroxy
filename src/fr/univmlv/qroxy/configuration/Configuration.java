@@ -24,7 +24,6 @@ public class Configuration {
 	}
 	
 	public void prepareConfigurationWithPath(String pathToConf) throws IOException {
-		//TODO ADD Maximum size of cache
 		String path = pathToConf;
 		String type = null;
 		int max = -1;
