@@ -89,10 +89,11 @@ public class CacheShared{
 				 timeBytes[i] = buffer[i+4+filenameByte.length];
 			}
 			for(int i = 0, j = 0; i<size; i++){
-				if(j == 7){
-					j = 0;
+				filenameByte[i] = (byte)(filenameByte[i]^timeBytes[j]);
+				j++;
+				if(j == 8){
+					j= 0;
 				}
-				filenameByte[i] = (byte) (filenameByte[i]^timeBytes[j]);
 			}
 			String filename = new String(filenameByte);
 			String contentType = filename.split(";")[0];
