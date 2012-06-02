@@ -27,24 +27,45 @@ public class Cache {
 	private HashMap<String, Long> sizeMap = new HashMap<String, Long>();
 	private HashMap<String, Integer> contentTypes = new HashMap<String, Integer>();
 
+	/**
+	 * Return the instance of Cache
+	 * @return the instance
+	 */
 	public static Cache getInstance() {
 		return instance;
 	}
 
+	/**
+	 * Get all use content type
+	 * @return a Set of content type
+	 */
 	public Set<String> getContentTypesInCache() {
 		return contentTypes.keySet();
 	}
 
+	/**
+	 * Return the current uses size of a content type in cache
+	 * @param contentType
+	 * @return the current uses size
+	 */
 	public Long getSizeCacheOfContentType(String contentType) {
 		return sizeMap.get(contentType);
 	}
 	
+	/**
+	 * Empty all cache
+	 */
 	public void emptyCache() {
 		for (String key : contentTypes.keySet()) {
 			this.emptyCacheForContentType(key);
 		}
 	}
 
+	/**
+	 * Empty cache of a specific type
+	 * 
+	 * @param contentType
+	 */
 	public void emptyCacheForContentType(String contentType) {
 		File directory = new File(contentType);
 		String[] files = directory.list();
@@ -59,6 +80,16 @@ public class Cache {
 		sizeMap.put(contentType, (long)0);
 	}
 
+	/**
+	 * Put content in the cache
+	 * 
+	 * @param buffer
+	 * @param url
+	 * @param contentType
+	 * @param append if you want to append the content to a current file
+	 * 
+	 * @throws IOException
+	 */
 	public void addContentToCache(ByteBuffer buffer, String url, String contentType, boolean append) throws IOException {
 		MessageDigest md = null;
 		try {
@@ -96,10 +127,27 @@ public class Cache {
 		tree.addPath(url);
 	}
 
+	/**
+	 * Return if the file in cache is up to date
+	 * 
+	 * @param url
+	 * @param contentType
+	 * @return true if the file is up-to-date
+	 */
 	public boolean isUptodate(String url, String contentType){
 		return true;
 	}
 
+	/**
+	 * Return if a file is in the cache and if cache shared is unable also other qroxy
+	 * 
+	 * @param url
+	 * @param contentType
+	 * @param shared if the cache is shared
+	 * @return true if is found a cache
+	 * 
+	 * @throws FileNotFoundException
+	 */
 	public ReadableByteChannel isInCache(String url, String contentType, boolean shared) throws FileNotFoundException {
 		MessageDigest md = null;
 		try {
@@ -133,6 +181,13 @@ public class Cache {
 		return null;
 	}
 
+	/**
+	 * Free space in a specific content type cache
+	 * 
+	 * @param neededSpace
+	 * @param contentType
+	 * @return true if the space is free
+	 */
 	public boolean freeSpace(long neededSpace, String contentType) {
 		long size = 0;
 		if (contentType == null)

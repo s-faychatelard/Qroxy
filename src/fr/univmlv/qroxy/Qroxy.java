@@ -207,6 +207,12 @@ public class Qroxy implements Runnable {
 		}
 	}
 	
+	/**
+	 * Qroxy cache browser request
+	 * 
+	 * @param url
+	 * @param client
+	 */
 	public void sendCacheInformation(String url, SocketChannel client) {
 		Cache cache = Cache.getInstance();
 		/* Remove just a content type cache */

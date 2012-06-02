@@ -15,14 +15,30 @@ public class Configuration {
 	private final static char comment = '#';
 	private static boolean isShared=false;
 	
+	/**
+	 * Get the instance of Configuration
+	 * 
+	 * @return the instance
+	 */
 	public static Configuration getInstance() {
 		return instance;
 	}
 	
+	/**
+	 * Get if the cache is configure has shared
+	 * @return
+	 */
 	public boolean isShared() {
 		return isShared;
 	}
 	
+	/**
+	 * Load configuration
+	 * 
+	 * @param pathToConf
+	 * 
+	 * @throws IOException
+	 */
 	public void prepareConfigurationWithPath(String pathToConf) throws IOException {
 		String path = pathToConf;
 		String type = null;
@@ -85,6 +101,12 @@ public class Configuration {
 		fin.close();
 	}
 	
+	/**
+	 * Get a ConfigurationType for a specific content
+	 * 
+	 * @param contentType
+	 * @return the configuration or preset configuration
+	 */
 	public ConfigurationType getConfForType(String contentType) {
 		ConfigurationType type = Configuration.getInstance().confMap.get(contentType);
 		if (type == null)
@@ -99,7 +121,6 @@ public class Configuration {
 	 * @throws IOException 
 	 *  
 	 */
-
 	public static void main(String[] args) throws IOException {
 		Configuration.getInstance().prepareConfigurationWithPath("/home/joachim/cache.conf");
 		System.out.println(Configuration.getInstance().getConfForType("text/html"));

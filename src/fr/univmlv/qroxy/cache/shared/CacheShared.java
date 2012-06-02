@@ -32,6 +32,10 @@ public class CacheShared{
 	private final static int BUFFER_SIZE = 262144;
 	private static CacheShared cacheShared = new CacheShared(4242);
 	
+	/**
+	 * Get the instance of CacheShared
+	 * @return
+	 */
 	public static CacheShared getInstance() {
 		return cacheShared;
 	}
@@ -46,6 +50,9 @@ public class CacheShared{
 		}
 	}
 	
+	/**
+	 * Start the listening service for Cache sharing
+	 */
 	public static void startService() {
 		final CacheShared cs = CacheShared.getInstance();
 		new Thread(new Runnable() {
@@ -63,6 +70,13 @@ public class CacheShared{
 		}).start();
 	}
 	
+	/**
+	 * Send a request for a file
+	 * 
+	 * @param filename
+	 * @param time of the file wanted
+	 * @return a Channel to the content of the file or null
+	 */
 	public SocketChannel sendCacheRequest(String filename, long time){
 		byte[] buffer = encode(filename, time);
 		DatagramPacket p = new DatagramPacket(buffer, buffer.length, this.multicastGroup, this.port);
@@ -74,6 +88,12 @@ public class CacheShared{
 		return this.waitResponse(filename);
 	}
 	
+	/**
+	 * Try to get an answer from other cache
+	 * 
+	 * @param filename
+	 * @return a Channel to the content of the file or null
+	 */
 	public SocketChannel waitResponse(String filename) {
 		int counter=TIMEOUT;
 		while(response == null) {
@@ -103,6 +123,11 @@ public class CacheShared{
 		return s;
 	}
 	
+	/**
+	 * Receive a request from another cache
+	 * 
+	 * @throws FileNotFoundException
+	 */
 	public void multicastReceive() throws FileNotFoundException{
 		byte[] buffer = new byte[1024];
 		final DatagramPacket dp = new DatagramPacket(buffer, buffer.length, this.multicastGroup, this.port);
@@ -184,6 +209,12 @@ public class CacheShared{
 		}
 	}
 	
+	/**
+	 * Send to a cache that you have the file in your cache
+	 * 
+	 * @param filename
+	 * @param time
+	 */
 	public void haveFileInCache(String filename, long time){
 		byte[] buffer = encode(filename, time);
 		buffer[0] = byte2.byteValue();
@@ -196,6 +227,13 @@ public class CacheShared{
 		}
 	}
 	
+	/**
+	 * Encode the content to send in a packet
+	 * 
+	 * @param filename
+	 * @param time
+	 * @return the format packet
+	 */
 	public byte[] encode(String filename, long time) {
 		byte[] buffer = new byte[12+filename.length()];
 		Short size = (short) filename.length();
@@ -229,6 +267,12 @@ public class CacheShared{
 		return buffer;
 	}
 	
+	/**
+	 * Get the content from a format packet
+	 * 
+	 * @param buffer
+	 * @return the decode data
+	 */
 	public String decode(byte[] buffer) {
 		ByteBuffer bb = ByteBuffer.allocate(2);
 		bb.put(buffer, 2, 2);

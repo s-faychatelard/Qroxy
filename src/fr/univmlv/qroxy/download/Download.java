@@ -36,10 +36,17 @@ public class Download implements Runnable {
 		this.keepAlive = false;
 	}
 
+	/**
+	 * Stop the current download
+	 */
 	public void interrupt() {
 		stop=true;
 	}
 
+	/**
+	 * Return if keep-alive is set
+	 * @return true if keep-alive
+	 */
 	public boolean getKeepAlive() {
 		return this.keepAlive;
 	}

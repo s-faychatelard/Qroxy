@@ -13,18 +13,38 @@ public class ConfigurationType {
 		this.size = size;
 	}
 
+	/**
+	 * Get the size of cache
+	 * 
+	 * @return the maximum size
+	 */
 	public long getSize() {
 		return size;
 	}
 	
+	/**
+	 * Get the maximum debit
+	 * 
+	 * @return can be equal to -1
+	 */
 	public int getDebitmax() {
 		return debitmax;
 	}
 
+	/**
+	 * Get the minimum debit
+	 * 
+	 * @return can be equal to -1
+	 */
 	public int getDebitmin() {
 		return debitmin;
 	}
 
+	/**
+	 * Get the weight repartition of a content type
+	 * 
+	 * @return if not set in the file, is equal to 1
+	 */
 	public int getWeight() {
 		return weight;
 	}
