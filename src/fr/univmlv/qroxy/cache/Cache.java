@@ -4,14 +4,21 @@ package fr.univmlv.qroxy.cache;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
+import java.nio.channels.Channels;
 import java.nio.channels.Pipe;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Calendar;
 import java.util.HashMap;
 
+import sun.util.resources.CalendarData;
+
+import fr.univmlv.qroxy.cache.shared.CacheShared;
 import fr.univmlv.qroxy.cache.tree.TreeCache;
 import fr.univmlv.qroxy.configuration.Configuration;
 
@@ -19,6 +26,7 @@ public class Cache {
 	private final static Cache instance = new Cache();
 	private static TreeCache tree = new TreeCache();
 	private HashMap<String, Long> sizeMap = new HashMap<String, Long>();
+	
 	public static Cache getInstance() {
 		return instance;
 	}
@@ -60,7 +68,6 @@ public class Cache {
 	}
 
 	public void getFromCache(String url, String contentType, Pipe.SinkChannel channel) throws IOException {
-		ByteBuffer buffer = ByteBuffer.allocate(262144);
 		MessageDigest md = null;
 		try {
 			md = MessageDigest.getInstance("SHA-1");
@@ -80,13 +87,6 @@ public class Cache {
 		}
 		File file =  new File(contentType, hexSha1.toString());
 		FileInputStream input = new FileInputStream(file);
-		while(input.getChannel().read(buffer) != -1){
-			buffer.flip();
-			channel.write(buffer);
-			buffer.compact();
-		}
-		channel.close();
-		input.close();
 		
 		url = url.replace("://", "_");
 		tree.addPath(url);
@@ -96,7 +96,7 @@ public class Cache {
 		return true;
 	}
 
-	public boolean isInCache(String url, String contentType) {
+	public Channel isInCache(String url, String contentType, boolean shared) throws FileNotFoundException {
 		MessageDigest md = null;
 		try {
 			md = MessageDigest.getInstance("SHA-1");
@@ -115,9 +115,36 @@ public class Cache {
 			hexSha1.append(Integer.toHexString(0xFF & sha1[i]));
 		}
 		File file =  new File(contentType, hexSha1.toString());
-		if(file.exists() && !file.isDirectory())
-			return this.isUptodate(url, contentType);
-		return false;
+		if(file.exists() && !file.isDirectory()){
+				MessageDigest md1 = null;
+			try {
+				md1 = MessageDigest.getInstance("SHA-1");
+			} catch (NoSuchAlgorithmException e) {
+				System.err.println("Cannot generate SHA-1 for url " + url);
+			}
+			if (contentType == null)
+				contentType = "misc";
+			else
+				contentType = contentType.split(";")[0];
+			byte[] sha11 = new byte[40];
+			md1.update(url.getBytes(), 0, url.length());
+			sha11 = md1.digest();
+			StringBuilder hexSha11 = new StringBuilder();
+			for (int i=0;i<sha11.length;i++) {
+				hexSha11.append(Integer.toHexString(0xFF & sha11[i]));
+			}
+			File file1 =  new File(contentType, hexSha11.toString());
+			FileInputStream input = new FileInputStream(file1);
+			
+			url = url.replace("://", "_");
+			tree.addPath(url);
+			return input.getChannel();
+		}
+		if(shared == true){
+			CacheShared cs = new CacheShared(4242);
+			return cs.sendCacheRequest(url, Calendar.getInstance().getTimeInMillis());
+		}
+		return null;
 	}
 
 	public boolean freeSpace(long neededSpace, String contentType) {
@@ -150,9 +177,6 @@ public class Cache {
 		cache.addContentToCache(buffer, "http://www.facebook.com/joach/index.html", "text/html", false);
 		cache.addContentToCache(buffer, "http://www.facebook.com/index.html", "text/html", false);
 		cache.addContentToCache(buffer, "http://www.google.com/index.html", "text/html", true);
-		System.out.println(cache.isInCache("http://www.facebook.com/joach/index.html", "text/html"));
-		System.out.println(cache.isInCache("http://www.google.com/index.html", "text/html"));
-		System.out.println(cache.isInCache("http://www.google.com/toto.html", "text/html"));
 		System.out.println(tree);
 	}
 }
