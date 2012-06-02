@@ -17,6 +17,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
 
+import fr.univmlv.qroxy.cache.shared.CacheShared;
 import fr.univmlv.qroxy.configuration.Configuration;
 import fr.univmlv.qroxy.download.Download;
 
@@ -214,5 +215,6 @@ public class Qroxy {
 		}
 		/* Start qroxy */
 		new Qroxy(3128).launch();
+		CacheShared.startService();
 	}
 }

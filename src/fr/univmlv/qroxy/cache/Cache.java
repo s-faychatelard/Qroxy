@@ -95,7 +95,7 @@ public class Cache {
 		}
 		if(shared == true){
 			CacheShared cs = new CacheShared(4242);
-			return cs.sendCacheRequest(url, Calendar.getInstance().getTimeInMillis());
+			return cs.sendCacheRequest(contentType+";"+url, Calendar.getInstance().getTimeInMillis());
 		}
 		return null;
 	}
