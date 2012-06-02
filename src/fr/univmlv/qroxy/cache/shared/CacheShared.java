@@ -62,6 +62,7 @@ public class CacheShared{
 			buffer[i+4+filenameByte.length] = timeBytes[i];
 		}
 		DatagramPacket p = new DatagramPacket(buffer, 12+filename.length(), this.multicastGroup, this.port);
+		multicastReceive(p);
 		try {
 			this.socket.send(p);
 		} catch (IOException e) {
@@ -94,15 +95,24 @@ public class CacheShared{
 				filenameByte[i] = (byte) (filenameByte[i]^timeBytes[j]);
 			}
 			String filename = new String(filenameByte);
+			String contentType = filename.split(";")[0];
+			filename = filename.split(";")[1];
+			System.out.println(contentType);
+			System.out.println(filename);
+			
 			if(Cache.getInstance().isInCache(filename, contentType)){
-				
+				fileRequest();
 			}
 		}
 	}
 	
+	public void fileRequest(){
+		
+	}
+	
 	public static void main(String[] args) {
 		CacheShared cs = new CacheShared(1234);
-		cs.sendCacheRequest("http://www.google.fr/index.html", Calendar.getInstance().getTimeInMillis());
+		cs.sendCacheRequest("html/text;http://www.google.fr/index.html", Calendar.getInstance().getTimeInMillis());
 		
 	}
 
