@@ -8,8 +8,6 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
@@ -41,7 +39,7 @@ public class CacheShared{
 	private CacheShared(int port) {
 		this.port = port;
 		try {
-			multicastGroup = InetAddress.getByName("192.168.2.1");
+			multicastGroup = InetAddress.getByName("192.168.2.5");
 			socket = new MulticastSocket(port);
 		} catch (IOException e) {
 			System.err.println("Cannot open multicast socket");
