@@ -9,6 +9,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
 import java.net.ServerSocket;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
@@ -54,7 +55,7 @@ public class CacheShared{
 					}
 				}
 			}
-		});
+		}).start();
 	}
 	
 	public SocketChannel sendCacheRequest(String filename, long time){
@@ -65,6 +66,7 @@ public class CacheShared{
 		} catch (IOException e) {
 			System.err.println("Cannot send data to the multicast socket");
 		}
+		System.out.println("sendCacheRequest(String filename, long time)");
 		return this.waitResponse(filename);
 	}
 	
@@ -87,6 +89,7 @@ public class CacheShared{
 			counter--;
 			if (counter==0) return null;
 		}
+		System.out.println("waitResponse(String filename)");
 		SocketChannel s=null;
 		try {
 			s = SocketChannel.open();
@@ -104,6 +107,8 @@ public class CacheShared{
 		try {
 			this.socket.setSoTimeout(TIMEOUT);
 			this.socket.receive(dp);
+		} catch (SocketTimeoutException e) {
+			return;
 		} catch (IOException e) {
 			System.err.println("Cannot receive data from the multicast socket");
 		}
@@ -236,8 +241,8 @@ public class CacheShared{
 	
 	public static void main(String[] args) {
 		CacheShared cs = new CacheShared(1234);
+		CacheShared.startService();
 		cs.sendCacheRequest("html/text;http://www.google.fr/index.html", Calendar.getInstance().getTimeInMillis());
-		
 	}
 
 }
