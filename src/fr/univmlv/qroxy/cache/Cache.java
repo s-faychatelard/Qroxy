@@ -85,6 +85,9 @@ public class Cache {
 		for (int i=0;i<sha1.length;i++) {
 			hexSha1.append(Integer.toHexString(0xFF & sha1[i]));
 		}
+		System.out.println(url.length());
+		System.out.println(hexSha1.toString());
+		System.out.println(contentType);
 		File file =  new File(contentType, hexSha1.toString());
 		//TODO IsUpToDate
 		if(file.exists() && !file.isDirectory()){
@@ -127,9 +130,11 @@ public class Cache {
 		Cache cache = Cache.getInstance();
 		ByteBuffer buffer = ByteBuffer.allocate(200);
 		buffer.put("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".getBytes());
-		cache.addContentToCache(buffer, "http://www.facebook.com/joach/index.html", "text/html", false);
+		cache.addContentToCache(buffer, "http://free.fr/index.html", "text/html", false);
 		cache.addContentToCache(buffer, "http://www.facebook.com/index.html", "text/html", false);
 		cache.addContentToCache(buffer, "http://www.google.com/index.html", "text/html", true);
-		System.out.println(tree);
+		ReadableByteChannel rb = cache.isInCache("http://www.google.com/index.html", "text/html", false);
+		System.out.println(rb);
+		rb.close();
 	}
 }
