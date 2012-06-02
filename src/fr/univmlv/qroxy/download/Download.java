@@ -114,6 +114,7 @@ public class Download implements Runnable {
 				while(cacheChannel.read(bb) != -1) {
 					bb.flip();
 					channel.write(bb);
+					System.out.println(bb.limit());
 					
 					//TODO clear space in cache
 					if (cacheChannel instanceof SocketChannel) {
