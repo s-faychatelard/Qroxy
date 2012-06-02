@@ -13,6 +13,15 @@ public class Configuration {
 	private final static String startbalise = "[TYPE]";
 	private final static String stopbalise = "[/TYPE]";
 	private final static char comment = '#';
+	private static boolean isShared=false;
+	
+	public static Configuration getInstance() {
+		return instance;
+	}
+	
+	public boolean isShared() {
+		return isShared;
+	}
 	
 	public void prepareConfigurationWithPath(String pathToConf) throws IOException {
 		//TODO ADD Maximum size of cache
@@ -33,6 +42,10 @@ public class Configuration {
 			}
 			if(confString.charAt(0) == comment){
 				continue;
+			}
+			if(confString.contains("shared")){
+				String[] confLine = confString.split("=");
+				isShared = Boolean.valueOf(confLine[1]);
 			}
 			if(confString.equals(startbalise)){
 				while (sc.hasNextLine()) {
@@ -71,10 +84,6 @@ public class Configuration {
 			}
 		}
 		fin.close();
-	}
-	
-	public static Configuration getInstance() {
-		return instance;
 	}
 	
 	public ConfigurationType getConfForType(String contentType) {
