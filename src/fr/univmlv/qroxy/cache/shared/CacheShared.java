@@ -28,14 +28,19 @@ public class CacheShared{
 	private final static Integer TIMEOUT = 2000;
 	private InetAddress multicastGroup = null;
 	private int port;
-	private InetAddress response=null;
-	private String responseFilename=null;
+	private volatile static InetAddress response=null;
+	private volatile static String responseFilename=null;
 	private final static int BUFFER_SIZE = 262144;
+	private static CacheShared cacheShared = new CacheShared(4242);
 	
-	public CacheShared(int port) {
+	public static CacheShared getInstance() {
+		return cacheShared;
+	}
+	
+	private CacheShared(int port) {
 		this.port = port;
 		try {
-			multicastGroup = InetAddress.getByName("192.168.2.14");
+			multicastGroup = InetAddress.getByName("192.168.2.5");
 			socket = new MulticastSocket(port);
 		} catch (IOException e) {
 			System.err.println("Cannot open multicast socket");
@@ -43,7 +48,7 @@ public class CacheShared{
 	}
 	
 	public static void startService() {
-		final CacheShared cs = new CacheShared(4242);
+		final CacheShared cs = CacheShared.getInstance();
 		new Thread(new Runnable() {
 			
 			@Override
@@ -74,7 +79,7 @@ public class CacheShared{
 	public SocketChannel waitResponse(String filename) {
 		int counter=TIMEOUT;
 		while(response == null) {
-			if (counter==0) return null;
+			if (counter==0) { System.out.println("response timeout"); return null; }
 			try {
 				Thread.sleep(1);
 			} catch (InterruptedException e1) { return null; }
@@ -88,7 +93,7 @@ public class CacheShared{
 				Thread.sleep(1);
 			} catch (InterruptedException e1) { return null; }
 			counter--;
-			if (counter==0) return null;
+			if (counter==0) { System.out.println("responseFilename timeout"); return null; }
 		}
 		System.out.println("waitResponse(String filename)");
 		SocketChannel s=null;
@@ -170,6 +175,7 @@ public class CacheShared{
 		}
 		if(buffer[0] == byte2.byteValue() && buffer[1] == byte1.byteValue()){
 			response = dp.getAddress();
+			System.out.println(response.getHostAddress());
 			responseFilename = decode(buffer);
 		}
 	}
@@ -248,9 +254,9 @@ public class CacheShared{
 	}
 	
 	public static void main(String[] args) {
-		CacheShared cs = new CacheShared(4242);
+		CacheShared cs = CacheShared.getInstance();
 		CacheShared.startService();
-		cs.sendCacheRequest("text/html;http://www.google.com/index.html", Calendar.getInstance().getTimeInMillis());
+		System.out.println(cs.sendCacheRequest("text/html;http://free.fr/index.html", Calendar.getInstance().getTimeInMillis()));;
 	}
 
 }
