@@ -18,6 +18,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
 
+import javax.management.timer.Timer;
+
 import fr.univmlv.qroxy.cache.Cache;
 
 public class CacheShared{
@@ -25,7 +27,7 @@ public class CacheShared{
 	private MulticastSocket socket;
 	private final static Integer byte1 = 0x53;
 	private final static Integer byte2 = 0x4A;
-	private final static Integer TIMEOUT = 2000;
+	private final static Integer TIMEOUT = 50;
 	private InetAddress multicastGroup = null;
 	private int port;
 	private InetAddress response=null;
@@ -35,7 +37,7 @@ public class CacheShared{
 	public CacheShared(int port) {
 		this.port = port;
 		try {
-			multicastGroup = InetAddress.getByName("192.168.2.6");
+			multicastGroup = InetAddress.getByName("192.168.2.5");
 			socket = new MulticastSocket(port);
 		} catch (IOException e) {
 			System.err.println("Cannot open multicast socket");
@@ -74,7 +76,7 @@ public class CacheShared{
 	public SocketChannel waitResponse(String filename) {
 		int counter=TIMEOUT;
 		while(response == null) {
-			if (counter==0) return null;
+			if (counter==0) { System.out.println("response timeout"); return null; }
 			try {
 				Thread.sleep(1);
 			} catch (InterruptedException e1) { return null; }
@@ -88,7 +90,7 @@ public class CacheShared{
 				Thread.sleep(1);
 			} catch (InterruptedException e1) { return null; }
 			counter--;
-			if (counter==0) return null;
+			if (counter==0) { System.out.println("responseFilename timeout"); return null; }
 		}
 		System.out.println("waitResponse(String filename)");
 		SocketChannel s=null;
@@ -113,6 +115,7 @@ public class CacheShared{
 		} catch (IOException e) {
 			System.err.println("Cannot receive data from the multicast socket");
 		}
+		System.out.println("Data wesh");
 		buffer = dp.getData();
 		if(buffer[0] == byte1.byteValue() && buffer[1] == byte2.byteValue()){
 			String filename = decode(buffer);
@@ -124,7 +127,7 @@ public class CacheShared{
 			if(channel != null){
 				haveFileInCache(filename, Calendar.getInstance().getTimeInMillis());
 				try {
-					ServerSocket server = new ServerSocket(6060);
+					final ServerSocket server = new ServerSocket(6060);
 //					server.getChannel().configureBlocking(false);
 					Socket sChannel = server.accept();
 					
@@ -245,7 +248,8 @@ public class CacheShared{
 	public static void main(String[] args) {
 		CacheShared cs = new CacheShared(4242);
 		CacheShared.startService();
-		cs.sendCacheRequest("html/text;http://www.google.fr/index.html", Calendar.getInstance().getTimeInMillis());
+		if (cs.sendCacheRequest("text/html;http://www.google.com/index.html", Calendar.getInstance().getTimeInMillis()) == null)
+			cs.socket.close();
 	}
 
 }

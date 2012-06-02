@@ -213,7 +213,7 @@ public class Qroxy {
 			e.printStackTrace();
 		}
 		/* Start qroxy */
-		new Qroxy(3128).launch();
 		CacheShared.startService();
+		new Qroxy(3128).launch();
 	}
 }
