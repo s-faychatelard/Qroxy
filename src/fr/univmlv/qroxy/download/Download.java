@@ -7,8 +7,9 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.Pipe;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -105,10 +106,22 @@ public class Download implements Runnable {
 
 			/* Check if the content is not already in the cache */
 			//TODO add Configuration.getInstance().isShared();
-			Channel cacheChannel = cache.isInCache(urlPath, urlConnection.getContentType(), true);
+			ReadableByteChannel cacheChannel = cache.isInCache(urlPath, urlConnection.getContentType(), true);
 			if (cacheChannel != null) {
 				// Get from cache
-				//cache.getFromCache(urlPath, urlConnection.getContentType(), this.channel);
+				ByteBuffer bb = ByteBuffer.allocate(BUFFER_SIZE);
+				while(cacheChannel.read(bb) != -1) {
+					bb.flip();
+					channel.write(bb);
+					
+					if (cacheChannel instanceof SocketChannel) {
+						cache.addContentToCache(bb, urlPath, urlConnection.getContentType(), true);
+					}
+					
+					bb.clear();
+				}
+				cacheChannel.close();
+				channel.close();
 				return;
 			}
 

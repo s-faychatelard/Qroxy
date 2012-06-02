@@ -11,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.Channels;
 import java.nio.channels.Pipe;
+import java.nio.channels.ReadableByteChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
@@ -67,36 +68,11 @@ public class Cache {
 		tree.addPath(url);
 	}
 
-	public void getFromCache(String url, String contentType, Pipe.SinkChannel channel) throws IOException {
-		MessageDigest md = null;
-		try {
-			md = MessageDigest.getInstance("SHA-1");
-		} catch (NoSuchAlgorithmException e) {
-			System.err.println("Cannot generate SHA-1 for url " + url);
-		}
-		if (contentType == null)
-			contentType = "misc";
-		else
-			contentType = contentType.split(";")[0];
-		byte[] sha1 = new byte[40];
-		md.update(url.getBytes(), 0, url.length());
-		sha1 = md.digest();
-		StringBuilder hexSha1 = new StringBuilder();
-		for (int i=0;i<sha1.length;i++) {
-			hexSha1.append(Integer.toHexString(0xFF & sha1[i]));
-		}
-		File file =  new File(contentType, hexSha1.toString());
-		FileInputStream input = new FileInputStream(file);
-		
-		url = url.replace("://", "_");
-		tree.addPath(url);
-	}
-
 	public boolean isUptodate(String url, String contentType){
 		return true;
 	}
 
-	public Channel isInCache(String url, String contentType, boolean shared) throws FileNotFoundException {
+	public ReadableByteChannel isInCache(String url, String contentType, boolean shared) throws FileNotFoundException {
 		MessageDigest md = null;
 		try {
 			md = MessageDigest.getInstance("SHA-1");
@@ -117,26 +93,7 @@ public class Cache {
 		File file =  new File(contentType, hexSha1.toString());
 		//TODO IsUpToDate
 		if(file.exists() && !file.isDirectory()){
-			MessageDigest md1 = null;
-			try {
-				md1 = MessageDigest.getInstance("SHA-1");
-			} catch (NoSuchAlgorithmException e) {
-				System.err.println("Cannot generate SHA-1 for url " + url);
-			}
-			if (contentType == null)
-				contentType = "misc";
-			else
-				contentType = contentType.split(";")[0];
-			byte[] sha11 = new byte[40];
-			md1.update(url.getBytes(), 0, url.length());
-			sha11 = md1.digest();
-			StringBuilder hexSha11 = new StringBuilder();
-			for (int i=0;i<sha11.length;i++) {
-				hexSha11.append(Integer.toHexString(0xFF & sha11[i]));
-			}
-			File file1 =  new File(contentType, hexSha11.toString());
-			FileInputStream input = new FileInputStream(file1);
-			
+			FileInputStream input = new FileInputStream(file);
 			url = url.replace("://", "_");
 			tree.addPath(url);
 			return input.getChannel();
