@@ -108,6 +108,7 @@ public class Download implements Runnable {
 			/* Check if the content is not already in the cache */
 			ReadableByteChannel cacheChannel = cache.isInCache(urlPath, urlConnection.getContentType(), Configuration.getInstance().isShared());
 			if (cacheChannel != null) {
+				System.out.println("Get from cache");
 				/* Get from cache */
 				ByteBuffer bb = ByteBuffer.allocate(BUFFER_SIZE);
 				while(cacheChannel.read(bb) != -1) {

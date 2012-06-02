@@ -100,7 +100,6 @@ public class Qroxy {
 								Map<String, String> properties = new HashMap<String, String>();
 								while(scanner.hasNextLine()) {
 									line = scanner.nextLine();
-									System.out.println(line);
 									if (line.length() == 0) {
 										break;
 									}

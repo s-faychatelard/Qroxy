@@ -23,7 +23,7 @@ public class CacheShared{
 	private MulticastSocket socket;
 	private final static Integer byte1 = 0x53;
 	private final static Integer byte2 = 0x4A;
-	private final static Integer TIMEOUT = 50;
+	private final static Integer TIMEOUT = 2000;
 	private InetAddress multicastGroup = null;
 	private int port;
 	private InetAddress response=null;
@@ -93,6 +93,7 @@ public class CacheShared{
 			s.connect(new InetSocketAddress(response.getHostAddress(), 6060));
 			response=null;
 			responseFilename=null;
+			System.out.println("Get from shared cache");
 		} catch (IOException e) { return null; }
 		return s;
 	}
