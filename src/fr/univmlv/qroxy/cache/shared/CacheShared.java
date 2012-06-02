@@ -13,6 +13,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -40,7 +41,7 @@ public class CacheShared{
 	private CacheShared(int port) {
 		this.port = port;
 		try {
-			multicastGroup = InetAddress.getByName("192.168.2.5");
+			multicastGroup = InetAddress.getByName("192.168.2.1");
 			socket = new MulticastSocket(port);
 		} catch (IOException e) {
 			System.err.println("Cannot open multicast socket");
@@ -129,13 +130,15 @@ public class CacheShared{
 			if(channel != null){
 				haveFileInCache(contentType+";"+filename, Calendar.getInstance().getTimeInMillis());
 				try {
-					ServerSocket server = new ServerSocket(6060);
+					ServerSocketChannel server = ServerSocketChannel.open();
+					server.bind(new InetSocketAddress(6060));
 					//server.getChannel().configureBlocking(false);
-					server.setSoTimeout(5000);
-					Socket sChannel = null;
-					try{
-						sChannel = server.accept();						
-					}catch (SocketTimeoutException e) {
+					server.configureBlocking(false);
+					SocketChannel sChannel = null;
+					System.out.println("wait client");
+					sChannel = server.accept();						
+					if (sChannel == null) {
+						System.out.println("no client  bye");
 						channel.close();
 						return;
 					}
@@ -162,7 +165,7 @@ public class CacheShared{
 					ByteBuffer bb = ByteBuffer.allocate(BUFFER_SIZE);
 					while(input.getChannel().read(bb) != -1) {
 						bb.flip();
-						sChannel.getChannel().write(bb);	
+						sChannel.write(bb);	
 						bb.compact();
 					}
 					sChannel.close();
