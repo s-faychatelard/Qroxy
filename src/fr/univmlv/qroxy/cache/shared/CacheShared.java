@@ -35,7 +35,7 @@ public class CacheShared{
 	public CacheShared(int port) {
 		this.port = port;
 		try {
-			multicastGroup = InetAddress.getByName("192.168.2.6");
+			multicastGroup = InetAddress.getByName("192.168.2.14");
 			socket = new MulticastSocket(port);
 		} catch (IOException e) {
 			System.err.println("Cannot open multicast socket");
@@ -125,10 +125,15 @@ public class CacheShared{
 				haveFileInCache(filename, Calendar.getInstance().getTimeInMillis());
 				try {
 					ServerSocket server = new ServerSocket(6060);
-//					server.getChannel().configureBlocking(false);
-					Socket sChannel = server.accept();
-					
-					if (sChannel == null) return;
+					//server.getChannel().configureBlocking(false);
+					server.setSoTimeout(5000);
+					Socket sChannel = null;
+					try{
+						sChannel = server.accept();						
+					}catch (SocketTimeoutException e) {
+						channel.close();
+						return;
+					}
 					MessageDigest md = null;
 					try {
 						md = MessageDigest.getInstance("SHA-1");
@@ -245,7 +250,7 @@ public class CacheShared{
 	public static void main(String[] args) {
 		CacheShared cs = new CacheShared(4242);
 		CacheShared.startService();
-		cs.sendCacheRequest("html/text;http://www.google.fr/index.html", Calendar.getInstance().getTimeInMillis());
+		cs.sendCacheRequest("text/html;http://www.google.com/index.html", Calendar.getInstance().getTimeInMillis());
 	}
 
 }
