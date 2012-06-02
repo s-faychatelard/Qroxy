@@ -7,6 +7,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.nio.channels.Pipe;
 import java.util.HashMap;
 import java.util.Map;
@@ -103,9 +104,11 @@ public class Download implements Runnable {
 			Cache cache = Cache.getInstance();
 
 			/* Check if the content is not already in the cache */
-			if (cache.isInCache(urlPath, urlConnection.getContentType())) {
+			//TODO add Configuration.getInstance().isShared();
+			Channel cacheChannel = cache.isInCache(urlPath, urlConnection.getContentType(), true);
+			if (cacheChannel != null) {
 				// Get from cache
-				cache.getFromCache(urlPath, urlConnection.getContentType(), this.channel);
+				//cache.getFromCache(urlPath, urlConnection.getContentType(), this.channel);
 				return;
 			}
 

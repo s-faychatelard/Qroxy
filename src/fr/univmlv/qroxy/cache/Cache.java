@@ -115,8 +115,9 @@ public class Cache {
 			hexSha1.append(Integer.toHexString(0xFF & sha1[i]));
 		}
 		File file =  new File(contentType, hexSha1.toString());
+		//TODO IsUpToDate
 		if(file.exists() && !file.isDirectory()){
-				MessageDigest md1 = null;
+			MessageDigest md1 = null;
 			try {
 				md1 = MessageDigest.getInstance("SHA-1");
 			} catch (NoSuchAlgorithmException e) {
