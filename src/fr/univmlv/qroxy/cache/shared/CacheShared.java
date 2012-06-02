@@ -39,7 +39,7 @@ public class CacheShared{
 	private CacheShared(int port) {
 		this.port = port;
 		try {
-			multicastGroup = InetAddress.getByName("192.168.2.5");
+			multicastGroup = InetAddress.getByName("239.254.42.52");
 			socket = new MulticastSocket(port);
 		} catch (IOException e) {
 			System.err.println("Cannot open multicast socket");
